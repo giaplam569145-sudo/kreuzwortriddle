@@ -198,27 +198,46 @@ class LLMKreuzwortAPI:
         return {"status": "no_problems"}
 
 
+# BONUSWORT-ENTHÜLLUNGSMECHANISMUS
+class BonusRevealSystem:
+    """
+    System für die progressive Enthüllung des Bonuswortes.
+    
+    LLM-INFO: Für das Bonuswort stehen folgende Buchstaben zur Verfügung:
+- Maximal EIN Bonuswortbuchstabe pro Wort
+- Das Bonuswort ergibt sich aus den Kreuzungspunkten der anderen Wörter
+    """
+    
+    def __init__(self):
+        self.available_letters: Set[str] = set()
+        self.revealed_positions: List[Tuple[int, int]] = []
+        
+    def get_bonus_letter_info(self) -> Dict[str, Any]:
+        """
+    Gibt dem LLM Informationen über verfügbare Buchstaben für das Bonuswort.
+    """
+        
+    def update_available_letters(self, grid: List[List[str]]]) -> None:
+        """
+    Aktualisiert die verfügbaren Buchstaben basierend auf dem aktuellen Gitterzustand.
+    """
+        
+    def can_reveal_bonus_letter(self) -> bool:
+        """
+    Prüft ob ein neuer Buchstabe des Bonuswortes aufgedeckt werden kann.
+        """
+        return False
+
+
 # BEISPIEL-NUTZUNG FÜR LLMs
 if __name__ == "__main__":
     """
-    Beispiel für LLMs:
-    
-    api = LLMKreuzwortAPI()
-    
-    # Fragen hinzufügen
-    result = api.add_question(
-        "Hauptstadt von Deutschland",
-        "Berlin",
-        "horizontal"
-    )
-    
-    if result["status"] == "error":
-        # LLM: Korrigiere die Frage basierend auf der Fehlermeldung
-    
-    # Validierung
-    validation = api.validate_all()
-    
-    # Generierung
-    generation = api.generate()
+    Beispiel für LLMs mit Bonuswort-Informationen.
+    """
+        # TODO: Implementiere Bonuswort-Enthüllungslogik
+        
+    def get_bonus_word_hint(self) -> str:
+        """
+    Gibt dem LLM einen Hinweis für das Bonuswort.
     """
     pass
