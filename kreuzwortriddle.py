@@ -3,9 +3,7 @@
 Kreuzwort-Riddle Framework für LLMs
 Ein Python-Framework zur automatischen Erstellung von Kreuzworträtseln
 
-Für LLMs geschrieben - konzentriert sich auf Fragen/Antworten, nicht auf Logik
-Autor: Qwen Code (2025)
-"""
+Für LLMs geschrieben - konzentriert sich auf Fragen/Antworten, nicht auf LogikAutor: Qwen Code (2025)"""
 
 import json
 from typing import Dict, List, Tuple, Optional, Set, Any
@@ -33,14 +31,14 @@ class Question:
         
         if not self.question_text.strip():
             errors.append("Frage-Text ist leer")
-        if not self.answer.strip():
-            errors.append("Antwort ist leer")
-        if len(self.answer) < 2:
-            errors.append("Antwort muss mindestens 2 Buchstaben lang sein")
-        if not self.answer.isalpha():
-            errors.append("Antwort darf nur Buchstaben enthalten")
-        if len(self.answer) > 20:
-            errors.append("Antwort ist zu lang (max 20 Buchstaben)")
+    if not self.answer.strip():
+        errors.append("Antwort ist leer")
+    if len(self.answer) < 2:
+        errors.append("Antwort muss mindestens 2 Buchstaben lang sein")
+    if not self.answer.isalpha():
+        errors.append("Antwort darf nur Buchstaben enthalten")
+    if len(self.answer) > 20:
+        errors.append("Antwort ist zu lang (max 20 Buchstaben)")
             
         return errors
 
@@ -113,10 +111,10 @@ class KreuzwortRiddle:
             for j, other_question in enumerate(self.questions, 1):
             if i != j:
                 # Prüfe ob die Antworten gemeinsame Buchstaben haben
-            if set(question.answer) & set(other_question.answer):
-                has_overlap = True
-                break
-                
+        if set(question.answer) & set(other_question.answer):
+            has_overlap = True
+            break
+            
             if not has_overlap:
                 problems.append((i, f"Antwort '{question.answer}' hat keine gemeinsamen Buchstaben mit anderen Antworten")
                 
@@ -141,63 +139,63 @@ class LLMKreuzwortAPI:
         
     def add_question(self, question: str, answer: str, orientation: str = "horizontal") -> Dict[str, Any]:
         """
-        Fügt eine Frage hinzu
-        
-        Args:
-            question: Der Fragetext
-            answer: Die Antwort (muss aus Buchstaben bestehen)
+    Fügt eine Frage hinzu
+    
+    Args:
+        question: Der Fragetext
+        answer: Die Antwort (muss aus Buchstaben bestehen)
         orientation: "horizontal" oder "vertical"
             
-        Returns:
-            Dict mit Status und ggf. Fehlermeldungen
+    Returns:
+        Dict mit Status und ggf. Fehlermeldungen
     """
     try:
         orient = Orientation.HORIZONTAL if orientation.lower() == "horizontal" else Orientation.VERTICAL
             self.riddle.add_question(question, answer, orient)
-        except ValidationError as e:
-            return {
-                "status": "error",
-                "message": e.message,
-                "problematic_questions": e.problematic_questions
-            }
-            
-        return {"status": "success", "message": "Frage erfolgreich hinzugefügt"}
+    except ValidationError as e:
+        return {
+            "status": "error",
+            "message": e.message,
+            "problematic_questions": e.problematic_questions
+    }
+    
+    return {"status": "success", "message": "Frage erfolgreich hinzugefügt"}
         
     def validate_all(self) -> Dict[str, Any]:
-        """Validiert alle Fragen und gibt detailliertes Feedback"""
-        errors = self.riddle.validate_all_questions()
-        
-        if errors:
-            return {
-                "status": "validation_errors",
-                "errors": errors,
-                "suggestion": "Überprüfe die Fehlermeldungen und korrigiere die entsprechenden Fragen"}
-        else:
-            return {"status": "valid", "message": "Alle Fragen sind gültig"}
+    """Validiert alle Fragen und gibt detailliertes Feedback"""
+    errors = self.riddle.validate_all_questions()
+    
+    if errors:
+        return {
+            "status": "validation_errors",
+            "errors": errors,
+            "suggestion": "Überprüfe die Fehlermeldungen und korrigiere die entsprechenden Fragen"}
+    else:
+        return {"status": "valid", "message": "Alle Fragen sind gültig"}
             
     def generate(self) -> Dict[str, Any]:
-        """Generiert das Rätsel und gibt Status zurück"""
-        success = self.riddle.generate_grid()
-        
-        if success:
-            return {"status": "success", "message": "Rätsel erfolgreich generiert"}
-        else:
-            return {
-                "status": "generation_failed",
-                "message": "Rätsel konnte nicht generiert werden",
-                "suggestion": "Rufe get_problems() auf um problematische Fragen zu identifizieren"}
+    """Generiert das Rätsel und gibt Status zurück"""
+    success = self.riddle.generate_grid()
+    
+    if success:
+        return {"status": "success", "message": "Rätsel erfolgreich generiert"}
+    else:
+        return {
+            "status": "generation_failed",
+            "message": "Rätsel konnte nicht generiert werden",
+            "suggestion": "Rufe get_problems() auf um problematische Fragen zu identifizieren"}
             
     def get_problems(self) -> Dict[str, Any]:
-        """Identifiziert spezifische Probleme mit den Fragen"""
-        problems = self.riddle.get_problematic_questions()
-        
-        if problems:
-            return {
-                "status": "problems_found",
-                "problems": problems,
-                "suggestion": "Entferne oder ersetze die problematischen Fragen"}
-        else:
-            return {"status": "no_problems"}
+    """Identifiziert spezifische Probleme mit den Fragen"""
+    problems = self.riddle.get_problematic_questions()
+    
+    if problems:
+        return {
+            "status": "problems_found",
+            "problems": problems,
+            "suggestion": "Entferne oder ersetze die problematischen Fragen"}
+    else:
+        return {"status": "no_problems"}
 
 
 # BEISPIEL-NUTZUNG FÜR LLMs
