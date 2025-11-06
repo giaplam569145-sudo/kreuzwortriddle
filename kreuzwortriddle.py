@@ -29,7 +29,6 @@ class Question:
     orientation: Orientation = Orientation.HORIZONTAL
     
     def validate(self) -> List[str]:
-        """Überprüft die Frage auf grundlegende Validität"""
         errors = []
         
         if not self.question_text.strip():
@@ -40,6 +39,8 @@ class Question:
             errors.append("Antwort muss mindestens 2 Buchstaben lang sein")
         if not self.answer.isalpha():
             errors.append("Antwort darf nur Buchstaben enthalten")
+        if len(self.answer) > 20:
+            errors.append("Antwort ist zu lang (max 20 Buchstaben)")
             
         return errors
 
@@ -61,8 +62,10 @@ class WordPlacement:
     length: int
     
     def overlaps_with(self, other: 'WordPlacement') -> bool:
-        """Prüft ob sich zwei Wörter überschneiden"""
-        pass
+        if self.question.orientation == other.question.orientation:
+            return False
+            
+        return False
 
 
 class KreuzwortRiddle:
@@ -72,28 +75,22 @@ class KreuzwortRiddle:
         self.width = width
         self.height = height
         self.questions: List[Question] = []
-        self.grid: List[List[str]] = self._create_empty_grid()
         self.placements: List[WordPlacement] = []
-        
-    def _create_empty_grid(self) -> List[List[str]]:
-        """Erstellt ein leeres Gitter"""
-        return [[' ' for _ in range(self.width)] for _ in range(self.height)]
         
     def add_question(self, question: str, answer: str, orientation: Orientation = Orientation.HORIZONTAL) -> None:
         """Fügt eine Frage hinzu mit automatischer Validierung"""
-        new_question = Question(question, answer, len(self.questions) + 1, orientation)
+        new_question = Question(question, answer, len(self.questions) + 1, orientation):
         errors = new_question.validate()
         
         if errors:
             raise ValidationError(
                 f"Frage {len(self.questions) + 1} ist ungültig: {', '.join(errors)}",
-                [(len(self.questions) + 1, error) for error in errors]
-            )
-            
+            [(len(self.questions) + 1, error) for error in errors]
+        )
+        
         self.questions.append(new_question)
         
     def validate_all_questions(self) -> List[str]:
-        """Validiert alle Fragen und gibt detaillierte Fehler zurück"""
         all_errors = []
         
         for i, question in enumerate(self.questions, 1):
@@ -105,13 +102,25 @@ class KreuzwortRiddle:
         
     def generate_grid(self) -> bool:
         """Versucht das Rätsel zu generieren - gibt True bei Erfolg zurück"""
-        # TODO: Implementiere den Platzierungsalgorithmus
         return False
         
     def get_problematic_questions(self) -> List[Tuple[int, str]]:
         """Identifiziert Fragen, die eine Rätselerstellung verhindern"""
-        # TODO: Implementiere die Identifikation "fauler" Fragen
-        return []
+        problems = []
+        
+        for i, question in enumerate(self.questions, 1):
+            has_overlap = False
+            for j, other_question in enumerate(self.questions, 1):
+            if i != j:
+                # Prüfe ob die Antworten gemeinsame Buchstaben haben
+            if set(question.answer) & set(other_question.answer):
+                has_overlap = True
+                break
+                
+            if not has_overlap:
+                problems.append((i, f"Antwort '{question.answer}' hat keine gemeinsamen Buchstaben mit anderen Antworten")
+                
+        return problems
 
 
 # LLM-FREUNDLICHE API
@@ -137,13 +146,13 @@ class LLMKreuzwortAPI:
         Args:
             question: Der Fragetext
             answer: Die Antwort (muss aus Buchstaben bestehen)
-            orientation: "horizontal" oder "vertical"
+        orientation: "horizontal" oder "vertical"
             
         Returns:
             Dict mit Status und ggf. Fehlermeldungen
-        """
-        try:
-            orient = Orientation.HORIZONTAL if orientation.lower() == "horizontal" else Orientation.VERTICAL
+    """
+    try:
+        orient = Orientation.HORIZONTAL if orientation.lower() == "horizontal" else Orientation.VERTICAL
             self.riddle.add_question(question, answer, orient)
         except ValidationError as e:
             return {
@@ -179,7 +188,16 @@ class LLMKreuzwortAPI:
                 "suggestion": "Rufe get_problems() auf um problematische Fragen zu identifizieren"}
             
     def get_problems(self) -> Dict[str, Any]:
-        """Identifiziert spezifische Probleme mit den Fragen"}
+        """Identifiziert spezifische Probleme mit den Fragen"""
+        problems = self.riddle.get_problematic_questions()
+        
+        if problems:
+            return {
+                "status": "problems_found",
+                "problems": problems,
+                "suggestion": "Entferne oder ersetze die problematischen Fragen"}
+        else:
+            return {"status": "no_problems"}
 
 
 # BEISPIEL-NUTZUNG FÜR LLMs
