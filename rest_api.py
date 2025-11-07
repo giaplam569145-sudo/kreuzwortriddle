@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""
-REST-API für das Kreuzwort-Riddle Framework
+"""REST-API for the Kreuzwort-Riddle Framework.
 
-Ermöglicht LLMs ohne direkten Python-Zugriff die Framework-Funktionalitäten zu nutzen.
+Allows LLMs to use the framework's functionalities without direct Python
+access.
 
-Autor: Qwen Code (2025)
+Author: Qwen Code (2025)
 """
 
 from flask import Flask, request, jsonify
@@ -21,33 +21,36 @@ bonus_system = BonusRevealSystem()
 
 @app.route('/api/questions', methods=['POST'])
 def add_question():
-    """
-    Fügt eine neue Frage über REST-API hinzu
-    
+    """Adds a new question via the REST API.
+
     Endpoint: POST /api/questions
-    Body: {
-        "question": "Fragentext",
-        "answer": "Antwort",
-        "orientation": "horizontal|vertical"
-    }
+    Body:
+        {
+            "question": "Question text",
+            "answer": "Answer",
+            "orientation": "horizontal|vertical"
+        }
+
+    Returns:
+        JSON response with the status of the operation.
     """
     try:
         data = request.get_json()
-        
+
         if not data:
             return jsonify({
                 "status": "error",
                 "message": "Keine Daten im Request-Body gefunden"
             }), 400
-        
+
         result = api.add_question(
             data.get('question', ''),
             data.get('answer', ''),
             data.get('orientation', 'horizontal')
         )
-        
+
         return jsonify(result)
-        
+
     except Exception as e:
         return jsonify({
             "status": "error",
@@ -57,10 +60,12 @@ def add_question():
 
 @app.route('/api/validate', methods=['GET'])
 def validate_all():
-    """
-    Validiert alle Fragen über REST-API
-    
+    """Validates all questions via the REST API.
+
     Endpoint: GET /api/validate
+
+    Returns:
+        JSON response with the validation result.
     """
     try:
         validation = api.validate_all()
@@ -74,24 +79,27 @@ def validate_all():
 
 @app.route('/api/generate', methods=['POST'])
 def generate_riddle():
-    """
-    Generiert das Rätsel über REST-API
-    
+    """Generates the crossword puzzle via the REST API.
+
     Endpoint: POST /api/generate
+
+    Returns:
+        JSON response with the generation result, including the grid and
+        placements on success.
     """
     try:
         generation = api.generate()
-        
+
         if generation["status"] == "success":
             # Füge Gitter und Platzierungen hinzu
             generation["grid"] = api.get_grid()
             generation["placements"] = api.get_placements()
-            
+
             # Aktualisiere Bonuswort-System
             bonus_system.update_available_letters(api.get_grid())
-        
+
         return jsonify(generation)
-        
+
     except Exception as e:
         return jsonify({
             "status": "error",
@@ -101,10 +109,12 @@ def generate_riddle():
 
 @app.route('/api/problems', methods=['GET'])
 def get_problems():
-    """
-    Identifiziert problematische Fragen über REST-API
-    
+    """Identifies problematic questions via the REST API.
+
     Endpoint: GET /api/problems
+
+    Returns:
+        JSON response with a list of problematic questions.
     """
     try:
         problems = api.get_problems()
@@ -118,42 +128,48 @@ def get_problems():
 
 @app.route('/api/bonus', methods=['POST', 'GET'])
 def handle_bonus():
-    """
-    Bonuswort-Funktionen über REST-API
-    
-    POST: Setzt Bonuswort
-    GET: Gibt Bonuswort-Status zurück
-    
+    """Handles bonus word functions via the REST API.
+
+    POST: Sets the bonus word.
+    GET: Returns the bonus word status.
+
     Endpoint: POST /api/bonus
-    Body: {"bonus_word": "EUROPA", "description": "Kontinent"}
-    
+    Body:
+        {
+            "bonus_word": "EUROPA",
+            "description": "Kontinent"
+        }
+
     Endpoint: GET /api/bonus
+
+    Returns:
+        JSON response with the bonus word information.
     """
     try:
         if request.method == 'POST':
             data = request.get_json()
             bonus_word = data.get('bonus_word', '')
-            
+
             if not bonus_word:
                 return jsonify({
                     "status": "error",
                     "message": "Bonuswort ist erforderlich"
                 }), 400
-            
+
             bonus_system.set_bonus_word(bonus_word)
             return jsonify({
                 "status": "success",
                 "message": f"Bonuswort '{bonus_word}' gesetzt",
                 "bonus_info": bonus_system.get_bonus_letter_info()
             })
-        
+
         elif request.method == 'GET':
             return jsonify({
                 "status": "success",
                 "bonus_info": bonus_system.get_bonus_letter_info(),
                 "hint": bonus_system.get_bonus_word_hint()
             })
-            
+
     except Exception as e:
         return jsonify({
             "status": "error",
@@ -163,10 +179,13 @@ def handle_bonus():
 
 @app.route('/api/bonus/reveal', methods=['POST'])
 def reveal_bonus_letter():
-    """
-    Deckt nächsten Buchstaben des Bonuswortes auf
-    
+    """Reveals the next letter of the bonus word.
+
     Endpoint: POST /api/bonus/reveal
+
+    Returns:
+        JSON response with the revealed letter and the current bonus word
+        hint.
     """
     try:
         if not bonus_system.can_reveal_bonus_letter():
@@ -174,7 +193,7 @@ def reveal_bonus_letter():
                 "status": "error",
                 "message": "Keine weiteren Buchstaben verfügbar"
             }), 400
-        
+
         letter = bonus_system.reveal_next_letter()
         return jsonify({
             "status": "success",
@@ -182,7 +201,7 @@ def reveal_bonus_letter():
             "hint": bonus_system.get_bonus_word_hint(),
             "bonus_info": bonus_system.get_bonus_letter_info()
         })
-        
+
     except Exception as e:
         return jsonify({
             "status": "error",
@@ -192,10 +211,12 @@ def reveal_bonus_letter():
 
 @app.route('/api/status', methods=['GET'])
 def get_status():
-    """
-    Gibt den aktuellen Status des Frameworks zurück
-    
+    """Returns the current status of the framework.
+
     Endpoint: GET /api/status
+
+    Returns:
+        JSON response with the framework's status information.
     """
     try:
         return jsonify({
@@ -220,16 +241,18 @@ def get_status():
 
 @app.route('/api/reset', methods=['POST'])
 def reset_framework():
-    """
-    Setzt das Framework zurück
-    
+    """Resets the framework.
+
     Endpoint: POST /api/reset
+
+    Returns:
+        JSON response with a success message.
     """
     try:
         global api, bonus_system
         api = LLMKreuzwortAPI()
         bonus_system = BonusRevealSystem()
-        
+
         return jsonify({
             "status": "success",
             "message": "Framework erfolgreich zurückgesetzt"
@@ -243,6 +266,14 @@ def reset_framework():
 
 @app.errorhandler(404)
 def not_found(error):
+    """Handles 404 Not Found errors.
+
+    Args:
+        error: The error object.
+
+    Returns:
+        JSON response with a 404 error message.
+    """
     return jsonify({
         "status": "error",
         "message": "Endpoint nicht gefunden"
@@ -251,6 +282,14 @@ def not_found(error):
 
 @app.errorhandler(500)
 def internal_error(error):
+    """Handles 500 Internal Server Error errors.
+
+    Args:
+        error: The error object.
+
+    Returns:
+        JSON response with a 500 error message.
+    """
     return jsonify({
         "status": "error",
         "message": "Interner Serverfehler"
@@ -263,9 +302,9 @@ if __name__ == '__main__':
 
 # BEISPIEL-NUTZUNG FÜR LLMs MIT REST-API
 """
-Beispiel für die Nutzung der REST-API:
+Example for using the REST API:
 
-1. Frage hinzufügen:
+1. Add a question:
 POST /api/questions
 {
     "question": "Hauptstadt von Deutschland",
@@ -273,22 +312,22 @@ POST /api/questions
     "orientation": "horizontal"
 }
 
-2. Validieren:
+2. Validate:
 GET /api/validate
 
-3. Generieren:
+3. Generate:
 POST /api/generate
 
-4. Bonuswort setzen:
+4. Set bonus word:
 POST /api/bonus
 {
     "bonus_word": "EUROPA",
     "description": "Kontinent"
 }
 
-5. Bonusbuchstabe aufdecken:
+5. Reveal bonus letter:
 POST /api/bonus/reveal
 
-6. Status abfragen:
+6. Get status:
 GET /api/status
 """

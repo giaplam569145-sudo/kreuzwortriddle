@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""
-Kreuzwort-Riddle Framework für LLMs
-Ein Python-Framework zur automatischen Erstellung von Kreuzworträtseln
+"""Kreuzwort-Riddle Framework für LLMs.
 
-Für LLMs geschrieben - konzentriert sich auf Fragen/Antworten, nicht auf Logik
+Ein Python-Framework zur automatischen Erstellung von Kreuzworträtseln.
+Für LLMs geschrieben - konzentriert sich auf Fragen/Antworten, nicht auf Logik.
+
 Autor: Qwen Code (2025)
 """
 
@@ -15,23 +15,39 @@ import random
 
 
 class Orientation(Enum):
-    """Ausrichtung der Wörter im Gitter"""
+    """Enumeration for word orientation in the grid.
+
+    Attributes:
+        HORIZONTAL: Represents horizontal orientation.
+        VERTICAL: Represents vertical orientation.
+    """
     HORIZONTAL = "horizontal"
     VERTICAL = "vertical"
 
 
 @dataclass
 class Question:
-    """Eine einzelne Kreuzwortfrage mit Validierungslogik"""
+    """Represents a single crossword question with validation logic.
+
+    Attributes:
+        question_text: The text of the question.
+        answer: The answer to the question.
+        number: The number of the question in the crossword.
+        orientation: The orientation of the answer in the grid.
+    """
     question_text: str
     answer: str
     number: int = 0
     orientation: Orientation = Orientation.HORIZONTAL
-    
+
     def validate(self) -> List[str]:
-        """Validiert die Frage und gibt eine Liste von Fehlern zurück"""
+        """Validates the question and returns a list of errors.
+
+        Returns:
+            A list of strings, where each string is an error message.
+        """
         errors = []
-        
+
         if not self.question_text.strip():
             errors.append("Frage-Text ist leer")
         if not self.answer.strip():
@@ -42,12 +58,18 @@ class Question:
             errors.append("Antwort darf nur Buchstaben enthalten")
         if len(self.answer) > 20:
             errors.append("Antwort ist zu lang (max 20 Buchstaben)")
-            
+
         return errors
 
 
 class ValidationError(Exception):
-    """Spezialisierter Fehler für Validierungsprobleme"""
+    """Custom exception for validation problems.
+
+    Attributes:
+        message: The error message.
+        problematic_questions: A list of tuples, where each tuple contains
+            the question number and the error message.
+    """
     def __init__(self, message: str, problematic_questions: List[Tuple[int, str]] = None):
         self.message = message
         self.problematic_questions = problematic_questions or []
@@ -56,76 +78,121 @@ class ValidationError(Exception):
 
 @dataclass
 class WordPlacement:
-    """Position eines Wortes im Gitter"""
+    """Represents the position of a word in the grid.
+
+    Attributes:
+        question: The Question object associated with this placement.
+        x: The x-coordinate of the starting letter.
+        y: The y-coordinate of the starting letter.
+        length: The length of the word.
+    """
     question: Question
     x: int
     y: int
     length: int
-    
+
     def overlaps_with(self, other: 'WordPlacement') -> bool:
-        """Prüft ob sich zwei Wörter überschneiden"""
+        """Checks if this word placement overlaps with another.
+
+        Args:
+            other: The other WordPlacement object to check against.
+
+        Returns:
+            True if the words overlap, False otherwise.
+        """
         if self.question.orientation == other.question.orientation:
             return False
-            
+
         # Prüfe ob sich die Wörter kreuzen
         if self.question.orientation == Orientation.HORIZONTAL:
             # Horizontales Wort kreuzt vertikales Wort
-            return (self.x <= other.x <= self.x + self.length - 1 and 
+            return (self.x <= other.x <= self.x + self.length - 1 and
                     other.y <= self.y <= other.y + other.length - 1)
         else:
             # Vertikales Wort kreuzt horizontales Wort
-            return (other.x <= self.x <= other.x + other.length - 1 and 
+            return (other.x <= self.x <= other.x + other.length - 1 and
                     self.y <= other.y <= self.y + other.length - 1)
 
 
 class KreuzwortRiddle:
-    """Hauptklasse für die Rätselerstellung"""
-    
+    """Main class for creating the crossword puzzle.
+
+    Attributes:
+        width: The width of the crossword grid.
+        height: The height of the crossword grid.
+        questions: A list of Question objects.
+        placements: A list of WordPlacement objects.
+        grid: A 2D list representing the crossword grid.
+    """
+
     def __init__(self, width: int = 15, height: int = 15):
+        """Initializes the KreuzwortRiddle.
+
+        Args:
+            width: The width of the crossword grid.
+            height: The height of the crossword grid.
+        """
         self.width = width
         self.height = height
         self.questions: List[Question] = []
         self.placements: List[WordPlacement] = []
         self.grid: List[List[str]] = [['' for _ in range(width)] for _ in range(height)]
-        
+
     def add_question(self, question: str, answer: str, orientation: Orientation = Orientation.HORIZONTAL) -> None:
-        """Fügt eine Frage hinzu mit automatischer Validierung"""
+        """Adds a question with automatic validation.
+
+        Args:
+            question: The text of the question.
+            answer: The answer to the question.
+            orientation: The orientation of the word in the grid.
+
+        Raises:
+            ValidationError: If the question is invalid.
+        """
         new_question = Question(question, answer, len(self.questions) + 1, orientation)
         errors = new_question.validate()
-        
+
         if errors:
             raise ValidationError(
                 f"Frage {len(self.questions) + 1} ist ungültig: {', '.join(errors)}",
                 [(len(self.questions) + 1, error) for error in errors]
             )
-        
+
         self.questions.append(new_question)
-        
+
     def validate_all_questions(self) -> List[str]:
-        """Validiert alle Fragen und gibt eine Liste von Fehlern zurück"""
+        """Validates all questions and returns a list of errors.
+
+        Returns:
+            A list of strings, where each string is an error message.
+        """
         all_errors = []
-        
+
         for i, question in enumerate(self.questions, 1):
             errors = question.validate()
             if errors:
                 all_errors.extend([f"Frage {i}: {error}" for error in errors])
-                
+
         return all_errors
-        
+
     def generate_grid(self) -> bool:
-        """Versucht das Rätsel zu generieren - gibt True bei Erfolg zurück"""
+        """Tries to generate the crossword puzzle grid.
+
+        Returns:
+            True if the grid was generated successfully, False otherwise.
+        """
         if not self.questions:
             return False
-            
+
         # Einfache Platzierungsstrategie
         self.placements.clear()
         self.grid = [['' for _ in range(self.width)] for _ in range(self.height)]
-        
+
         # Platziere erste Frage in der Mitte
         first_question = self.questions[0]
         start_x = (self.width - len(first_question.answer)) // 2
         start_y = self.height // 2
-        
+
         placement = WordPlacement(
             question=first_question,
             x=start_x,
@@ -133,11 +200,11 @@ class KreuzwortRiddle:
             length=len(first_question.answer)
         )
         self.placements.append(placement)
-        
+
         # Platziere Wort im Gitter
         for i, char in enumerate(first_question.answer):
             self.grid[start_y][start_x + i] = char.upper()
-        
+
         # Versuche andere Wörter zu platzieren
         for question in self.questions[1:]:
             placed = False
@@ -147,14 +214,22 @@ class KreuzwortRiddle:
                     break
             if not placed:
                 return False
-                
+
         return True
-        
+
     def _try_place_word(self, question: Question, existing_placement: WordPlacement) -> bool:
-        """Versucht ein Wort an bestehendes Wort anzuschließen"""
+        """Tries to place a word connected to an existing word.
+
+        Args:
+            question: The question to place.
+            existing_placement: The existing word placement to connect to.
+
+        Returns:
+            True if the word was placed successfully, False otherwise.
+        """
         answer = question.answer.upper()
         existing_answer = existing_placement.question.answer.upper()
-        
+
         # Finde gemeinsame Buchstaben
         for i, char in enumerate(answer):
             for j, existing_char in enumerate(existing_answer):
@@ -168,7 +243,7 @@ class KreuzwortRiddle:
                         # Vertikales Wort
                         new_x = existing_placement.x
                         new_y = existing_placement.y + j - i
-                    
+
                     # Prüfe ob Position gültig ist
                     if self._can_place_at(question, new_x, new_y):
                         # Platziere das Wort
@@ -179,22 +254,31 @@ class KreuzwortRiddle:
                             length=len(answer)
                         )
                         self.placements.append(placement)
-                        
+
                         # Aktualisiere Gitter
-                        for k, char in enumerate(answer):
+                        for k, char_to_place in enumerate(answer):
                             if question.orientation == Orientation.HORIZONTAL:
-                                self.grid[new_y][new_x + k] = char
+                                self.grid[new_y][new_x + k] = char_to_place
                             else:
-                                self.grid[new_y + k][new_x] = char
-                        
+                                self.grid[new_y + k][new_x] = char_to_place
+
                         return True
-        
+
         return False
-        
+
     def _can_place_at(self, question: Question, x: int, y: int) -> bool:
-        """Prüft ob ein Wort an der angegebenen Position platziert werden kann"""
+        """Checks if a word can be placed at the specified position.
+
+        Args:
+            question: The question to place.
+            x: The x-coordinate of the starting letter.
+            y: The y-coordinate of the starting letter.
+
+        Returns:
+            True if the word can be placed at the position, False otherwise.
+        """
         answer = question.answer.upper()
-        
+
         # Prüfe Gittergrenzen
         if question.orientation == Orientation.HORIZONTAL:
             if x < 0 or x + len(answer) > self.width or y < 0 or y >= self.height:
@@ -202,23 +286,28 @@ class KreuzwortRiddle:
         else:
             if x < 0 or x >= self.width or y < 0 or y + len(answer) > self.height:
                 return False
-        
+
         # Prüfe Konflikte
         for i, char in enumerate(answer):
             if question.orientation == Orientation.HORIZONTAL:
                 grid_char = self.grid[y][x + i]
             else:
                 grid_char = self.grid[y + i][x]
-                
+
             if grid_char and grid_char != char:
                 return False
-        
+
         return True
-        
+
     def get_problematic_questions(self) -> List[Tuple[int, str]]:
-        """Identifiziert Fragen, die eine Rätselerstellung verhindern"""
+        """Identifies questions that prevent puzzle generation.
+
+        Returns:
+            A list of tuples, where each tuple contains the question number
+            and an error message.
+        """
         problems = []
-        
+
         for i, question in enumerate(self.questions, 1):
             has_overlap = False
             for j, other_question in enumerate(self.questions, 1):
@@ -227,40 +316,44 @@ class KreuzwortRiddle:
                     if set(question.answer.upper()) & set(other_question.answer.upper()):
                         has_overlap = True
                         break
-            
+
             if not has_overlap:
                 problems.append((i, f"Antwort '{question.answer}' hat keine gemeinsamen Buchstaben mit anderen Antworten"))
-                
+
         return problems
 
 
 # LLM-FREUNDLICHE API
 class LLMKreuzwortAPI:
+    """Simplified API specifically for LLMs.
+
+    Usage:
+    1. Create an API instance.
+    2. Add questions with add_question().
+    3. Call validate_all() to find problems.
+    4. Call generate() to create the puzzle.
+    5. In case of errors, use get_problems().
     """
-    Vereinfachte API speziell für LLMs
-    
-    Verwendung:
-    1. API-Instanz erstellen
-    2. Fragen mit add_question() hinzufügen
-    3. validate_all_questions() aufrufen um Probleme zu finden
-    4. generate_grid() aufrufen um das Rätsel zu erstellen
-    5. Bei Fehlern: get_problematic_questions() nutzen
-    """
-    
+
     def __init__(self, width: int = 15, height: int = 15):
-        self.riddle = KreuzwortRiddle(width, height)
-        
-    def add_question(self, question: str, answer: str, orientation: str = "horizontal") -> Dict[str, Any]:
-        """
-        Fügt eine Frage hinzu
-        
+        """Initializes the LLMKreuzwortAPI.
+
         Args:
-            question: Der Fragetext
-            answer: Die Antwort (muss aus Buchstaben bestehen)
-            orientation: "horizontal" oder "vertical"
-            
+            width: The width of the crossword grid.
+            height: The height of the crossword grid.
+        """
+        self.riddle = KreuzwortRiddle(width, height)
+
+    def add_question(self, question: str, answer: str, orientation: str = "horizontal") -> Dict[str, Any]:
+        """Adds a question.
+
+        Args:
+            question: The question text.
+            answer: The answer (must consist of letters).
+            orientation: "horizontal" or "vertical".
+
         Returns:
-            Dict mit Status und ggf. Fehlermeldungen
+            A dictionary with the status and, if applicable, error messages.
         """
         try:
             orient = Orientation.HORIZONTAL if orientation.lower() == "horizontal" else Orientation.VERTICAL
@@ -271,13 +364,18 @@ class LLMKreuzwortAPI:
                 "message": e.message,
                 "problematic_questions": e.problematic_questions
             }
-    
+
         return {"status": "success", "message": "Frage erfolgreich hinzugefügt"}
-        
+
     def validate_all(self) -> Dict[str, Any]:
-        """Validiert alle Fragen und gibt detailliertes Feedback"""
+        """Validates all questions and provides detailed feedback.
+
+        Returns:
+            A dictionary with the validation status and detailed error
+            information if any errors are found.
+        """
         errors = self.riddle.validate_all_questions()
-    
+
         if errors:
             return {
                 "status": "validation_errors",
@@ -286,11 +384,16 @@ class LLMKreuzwortAPI:
             }
         else:
             return {"status": "valid", "message": "Alle Fragen sind gültig"}
-            
+
     def generate(self) -> Dict[str, Any]:
-        """Generiert das Rätsel und gibt Status zurück"""
+        """Generates the puzzle and returns the status.
+
+        Returns:
+            A dictionary with the generation status and a success or failure
+            message.
+        """
         success = self.riddle.generate_grid()
-    
+
         if success:
             return {"status": "success", "message": "Rätsel erfolgreich generiert"}
         else:
@@ -299,11 +402,16 @@ class LLMKreuzwortAPI:
                 "message": "Rätsel konnte nicht generiert werden",
                 "suggestion": "Rufe get_problems() auf um problematische Fragen zu identifizieren"
             }
-            
+
     def get_problems(self) -> Dict[str, Any]:
-        """Identifiziert spezifische Probleme mit den Fragen"""
+        """Identifies specific problems with the questions.
+
+        Returns:
+            A dictionary containing information about the problematic
+            questions.
+        """
         problems = self.riddle.get_problematic_questions()
-    
+
         if problems:
             return {
                 "status": "problems_found",
@@ -312,13 +420,22 @@ class LLMKreuzwortAPI:
             }
         else:
             return {"status": "no_problems"}
-    
+
     def get_grid(self) -> List[List[str]]:
-        """Gibt das aktuelle Gitter zurück"""
+        """Returns the current grid.
+
+        Returns:
+            A 2D list representing the crossword grid.
+        """
         return self.riddle.grid
-    
+
     def get_placements(self) -> List[Dict[str, Any]]:
-        """Gibt die Platzierungen der Wörter zurück"""
+        """Returns the placements of the words.
+
+        Returns:
+            A list of dictionaries, where each dictionary represents a word
+            placement.
+        """
         return [
             {
                 "question": placement.question.question_text,
@@ -335,23 +452,28 @@ class LLMKreuzwortAPI:
 
 # BONUSWORT-ENTHÜLLUNGSMECHANISMUS
 class BonusRevealSystem:
+    """System for the progressive reveal of the bonus word.
+
+    LLM-INFO: The following letters are available for the bonus word:
+    - A maximum of ONE bonus word letter per word.
+    - The bonus word is derived from the intersection points of the other
+      words.
     """
-    System für die progressive Enthüllung des Bonuswortes.
-    
-    LLM-INFO: Für das Bonuswort stehen folgende Buchstaben zur Verfügung:
-    - Maximal EIN Bonuswortbuchstabe pro Wort
-    - Das Bonuswort ergibt sich aus den Kreuzungspunkten der anderen Wörter
-    """
-    
+
     def __init__(self):
+        """Initializes the BonusRevealSystem."""
         self.available_letters: Set[str] = set()
         self.revealed_positions: List[Tuple[int, int]] = []
         self.bonus_word: str = ""
         self.revealed_letters: List[str] = []
-        
+
     def get_bonus_letter_info(self) -> Dict[str, Any]:
-        """
-        Gibt dem LLM Informationen über verfügbare Buchstaben für das Bonuswort.
+        """Provides the LLM with information about available letters for the
+        bonus word.
+
+        Returns:
+            A dictionary with information about the available letters,
+            revealed positions, bonus word length, and revealed letters.
         """
         return {
             "available_letters": list(self.available_letters),
@@ -359,31 +481,38 @@ class BonusRevealSystem:
             "bonus_word_length": len(self.bonus_word) if self.bonus_word else 0,
             "revealed_letters": self.revealed_letters
         }
-        
+
     def update_available_letters(self, grid: List[List[str]]) -> None:
-        """
-        Aktualisiert die verfügbaren Buchstaben basierend auf dem aktuellen Gitterzustand.
+        """Updates the available letters based on the current state of the
+        grid.
+
+        Args:
+            grid: The current crossword grid.
         """
         self.available_letters.clear()
-        
+
         for y, row in enumerate(grid):
             for x, cell in enumerate(row):
                 if cell and (x, y) not in self.revealed_positions:
                     self.available_letters.add(cell)
-        
+
     def can_reveal_bonus_letter(self) -> bool:
-        """
-        Prüft ob ein neuer Buchstabe des Bonuswortes aufgedeckt werden kann.
+        """Checks if a new letter of the bonus word can be revealed.
+
+        Returns:
+            True if a new letter can be revealed, False otherwise.
         """
         return len(self.available_letters) > 0 and len(self.revealed_letters) < len(self.bonus_word)
-        
+
     def reveal_next_letter(self) -> Optional[str]:
-        """
-        Deckt den nächsten Buchstaben des Bonuswortes auf.
+        """Reveals the next letter of the bonus word.
+
+        Returns:
+            The revealed letter, or None if no letter can be revealed.
         """
         if not self.can_reveal_bonus_letter():
             return None
-            
+
         # Finde den nächsten Buchstaben im Bonuswort
         for i, letter in enumerate(self.bonus_word):
             if i >= len(self.revealed_letters) or self.revealed_letters[i] == '_':
@@ -393,23 +522,27 @@ class BonusRevealSystem:
                     else:
                         self.revealed_letters.append(letter)
                     return letter
-        
+
         return None
-        
+
     def set_bonus_word(self, word: str) -> None:
-        """
-        Setzt das Bonuswort.
+        """Sets the bonus word.
+
+        Args:
+            word: The bonus word.
         """
         self.bonus_word = word.upper()
         self.revealed_letters = ['_'] * len(word)
-        
+
     def get_bonus_word_hint(self) -> str:
-        """
-        Gibt dem LLM einen Hinweis für das Bonuswort.
+        """Provides the LLM with a hint for the bonus word.
+
+        Returns:
+            A string with the current state of the bonus word.
         """
         if not self.bonus_word:
             return "Kein Bonuswort gesetzt"
-            
+
         revealed = ''.join(self.revealed_letters)
         return f"Bonuswort: {revealed} ({len(self.revealed_letters)}/{len(self.bonus_word)} Buchstaben)"
 
@@ -417,7 +550,7 @@ class BonusRevealSystem:
 # BEISPIEL-NUTZUNG FÜR LLMs
 if __name__ == "__main__":
     """
-    Beispiel für LLMs mit Bonuswort-Informationen.
+    Example for LLMs with bonus word information.
     """
     # Beispiel für die grundlegende Nutzung
     api = LLMKreuzwortAPI()

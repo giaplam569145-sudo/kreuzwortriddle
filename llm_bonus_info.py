@@ -1,107 +1,100 @@
 #!/usr/bin/env python3
+"""LLM information for the bonus word reveal feature.
+
+This file contains specific information for LLMs:
+- Which letters are available for the bonus word.
+- A maximum of one bonus word letter per word is possible.
+- The maximum length of the bonus word is based on the number of words.
+- Progressive reveal mechanism.
+
+Author: Qwen Code (2025)
 """
-LLM-Informationen für Bonuswort-Enthüllung
 
-Diese Datei enthält spezifische Informationen für LLMs:
-- Welche Buchstaben für das Bonuswort verfügbar sind
-- Maximal ein Bonuswortbuchstabe pro Wort möglich
-- Maximale Länge des Bonuswortes basierend auf der Anzahl der Wörter
-- Progressiver Enthüllungsmechanismus
-
-Autor: Qwen Code (2025)
-"""
-
-from typing import Dict, List, Set, Tuple, Any
+from typing import Dict, List, Set, Tuple, Any, Optional
 
 
 class LLMBonusInfo:
+    """Specialized information class for LLMs.
+
+    Usage:
+    1. The LLM receives information about available letters.
+    2. The LLM can understand the bonus word logic.
+    3. The LLM can control the progressive reveal.
     """
-    Spezialisierte Informationsklasse für LLMs
-    
-    Verwendung:
-    1. LLM erhält Informationen über verfügbare Buchstaben
-    2. LLM kann Bonuswort-Logik verstehen
-    3. LLM kann progressive Enthüllung steuern
-    """
-    
+
     def __init__(self):
+        """Initializes the LLMBonusInfo."""
         self.available_letters: Set[str] = set()
         self.max_bonus_length: int = 0
         self.revealed_letters: List[str] = []
         self.bonus_word: str = ""
-        
+
     def update_bonus_info(self, current_grid: List[List[str]]) -> None:
-        """
-        Aktualisiert die Informationen über verfügbare Buchstaben für das Bonuswort.
-        
+        """Updates the information about available letters for the bonus word.
+
         Args:
-            current_grid: Das aktuelle Gitter mit platzierten Wörtern
+            current_grid: The current grid with placed words.
         """
         self.available_letters.clear()
-        
+
         # Sammle alle Buchstaben aus dem Gitter
         for row in current_grid:
             for cell in row:
                 if cell and cell.isalpha():
                     self.available_letters.add(cell.upper())
-    
+
     def get_available_letters(self) -> Set[str]:
-        """
-        Gibt die aktuell verfügbaren Buchstaben für das Bonuswort zurück.
-        
+        """Returns the currently available letters for the bonus word.
+
         Returns:
-            Set von verfügbaren Buchstaben
+            A set of available letters.
         """
         return self.available_letters.copy()
-    
+
     def check_bonus_reveal_conditions(self) -> bool:
-        """
-        Prüft die Bedingungen für die Enthüllung neuer Buchstaben.
-        
+        """Checks the conditions for revealing new letters.
+
         Returns:
-            True wenn Bedingungen erfüllt sind, False sonst
+            True if the conditions are met, False otherwise.
         """
-        return (len(self.available_letters) > 0 and 
+        return (len(self.available_letters) > 0 and
                 len(self.revealed_letters) < len(self.bonus_word))
-    
+
     def can_reveal_new_letter(self) -> bool:
-        """
-        Überprüft ob ein neuer Buchstabe des Bonuswortes aufgedeckt werden kann.
-        
+        """Checks if a new letter of the bonus word can be revealed.
+
         Returns:
-            True wenn ein neuer Buchstabe aufgedeckt werden kann
+            True if a new letter can be revealed.
         """
         if not self.bonus_word:
             return False
-            
+
         # Finde den nächsten nicht aufgedeckten Buchstaben
         for i, letter in enumerate(self.bonus_word):
             if i >= len(self.revealed_letters) or self.revealed_letters[i] == '_':
                 return letter in self.available_letters
-        
+
         return False
-    
+
     def set_bonus_word(self, word: str) -> None:
-        """
-        Setzt das Bonuswort und initialisiert die Enthüllung.
-        
+        """Sets the bonus word and initializes the reveal process.
+
         Args:
-            word: Das Bonuswort
+            word: The bonus word.
         """
         self.bonus_word = word.upper()
         self.revealed_letters = ['_'] * len(word)
         self.max_bonus_length = len(word)
-    
+
     def reveal_next_letter(self) -> Optional[str]:
-        """
-        Deckt den nächsten verfügbaren Buchstaben auf.
-        
+        """Reveals the next available letter.
+
         Returns:
-            Der aufgedeckte Buchstabe oder None
+            The revealed letter or None.
         """
         if not self.can_reveal_new_letter():
             return None
-        
+
         # Finde den nächsten aufdeckbaren Buchstaben
         for i, letter in enumerate(self.bonus_word):
             if i >= len(self.revealed_letters) or self.revealed_letters[i] == '_':
@@ -111,28 +104,26 @@ class LLMBonusInfo:
                     else:
                         self.revealed_letters.append(letter)
                     return letter
-        
+
         return None
-    
+
     def get_bonus_word_hint(self) -> str:
-        """
-        Gibt einen Hinweis für das Bonuswort zurück.
-        
+        """Returns a hint for the bonus word.
+
         Returns:
-            String mit dem aktuellen Stand des Bonuswortes
+            A string with the current state of the bonus word.
         """
         if not self.bonus_word:
             return "Kein Bonuswort gesetzt"
-        
+
         revealed = ''.join(self.revealed_letters)
         return f"Bonuswort: {revealed} ({len([l for l in self.revealed_letters if l != '_'])}/{len(self.bonus_word)} Buchstaben)"
-    
+
     def get_bonus_statistics(self) -> Dict[str, Any]:
-        """
-        Gibt Statistiken über das Bonuswort zurück.
-        
+        """Returns statistics about the bonus word.
+
         Returns:
-            Dict mit Statistiken
+            A dictionary with statistics.
         """
         return {
             "bonus_word": self.bonus_word,
@@ -147,21 +138,20 @@ class LLMBonusInfo:
 
 # LLM-SPEZIFISCHE INFORMATIONEN
 class BonusWordConstraints:
-    """
-    Definiert die Einschränkungen für das Bonuswort.
-    """
-    
+    """Defines the constraints for the bonus word."""
+
     def __init__(self):
+        """Initializes the BonusWordConstraints."""
         self.max_letters_per_word: int = 1
         self.max_bonus_length: int = 8  # Standard-Maximallänge
         self.min_bonus_length: int = 3
-    
+
     def get_constraints_info(self) -> Dict[str, Any]:
-        """
-        Gibt Informationen über die maximal mögliche Länge des Bonuswortes.
-        
+        """Returns information about the maximum possible length of the bonus
+        word.
+
         Returns:
-            Dict mit Constraint-Informationen
+            A dictionary with constraint information.
         """
         return {
             "max_letters_per_word": self.max_letters_per_word,
@@ -169,62 +159,60 @@ class BonusWordConstraints:
             "min_bonus_length": self.min_bonus_length,
             "description": "Maximal ein Buchstabe pro Wort für das Bonuswort"
         }
-    
+
     def calculate_max_bonus_length(self, num_questions: int) -> int:
-        """
-        Berechnet die maximale Länge des Bonuswortes basierend auf der Anzahl der Fragen.
-        
+        """Calculates the maximum length of the bonus word based on the
+        number of questions.
+
         Args:
-            num_questions: Anzahl der Fragen im Rätsel
-            
+            num_questions: The number of questions in the puzzle.
+
         Returns:
-            Maximale Länge des Bonuswortes
+            The maximum length of the bonus word.
         """
         calculated = min(num_questions * self.max_letters_per_word, self.max_bonus_length)
         return max(calculated, self.min_bonus_length)
-    
+
     def validate_bonus_word(self, bonus_word: str, available_letters: Set[str]) -> List[str]:
-        """
-        Validiert ein Bonuswort gegen die verfügbaren Buchstaben.
-        
+        """Validates a bonus word against the available letters.
+
         Args:
-            bonus_word: Das zu validierende Bonuswort
-            available_letters: Verfügbare Buchstaben
-            
+            bonus_word: The bonus word to validate.
+            available_letters: The available letters.
+
         Returns:
-            Liste von Validierungsfehlern
+            A list of validation errors.
         """
         errors = []
-        
+
         if not bonus_word.strip():
             errors.append("Bonuswort ist leer")
             return errors
-        
+
         if len(bonus_word) < self.min_bonus_length:
             errors.append(f"Bonuswort ist zu kurz (mindestens {self.min_bonus_length} Buchstaben)")
-        
+
         if len(bonus_word) > self.max_bonus_length:
             errors.append(f"Bonuswort ist zu lang (maximal {self.max_bonus_length} Buchstaben)")
-        
+
         if not bonus_word.isalpha():
             errors.append("Bonuswort darf nur Buchstaben enthalten")
-        
+
         # Prüfe ob alle Buchstaben verfügbar sind
         word_letters = set(bonus_word.upper())
         missing_letters = word_letters - available_letters
-        
+
         if missing_letters:
             errors.append(f"Fehlende Buchstaben im Gitter: {', '.join(missing_letters)}")
-        
+
         return errors
 
 
 def get_bonus_word_guidelines() -> Dict[str, Any]:
-    """
-    Gibt dem LLM klare Richtlinien für das Bonuswort.
-    
+    """Provides the LLM with clear guidelines for the bonus word.
+
     Returns:
-        Dict mit Richtlinien
+        A dictionary with guidelines.
     """
     return {
         "purpose": "Das Bonuswort ergibt sich aus den Kreuzungspunkten der anderen Wörter",
@@ -251,13 +239,12 @@ def get_bonus_word_guidelines() -> Dict[str, Any]:
 # BEISPIEL FÜR LLMs
 if __name__ == "__main__":
     """
-    Beispiel für LLM-Informationen über das Bonuswort.
+    Example for LLM information about the bonus word.
     """
-    
     # Erstelle Bonus-Info-System
     bonus_info = LLMBonusInfo()
     constraints = BonusWordConstraints()
-    
+
     # Beispiel-Gitter
     example_grid = [
         ['B', 'E', 'R', 'L', 'I', 'N'],
@@ -267,25 +254,25 @@ if __name__ == "__main__":
         ['I', '.', '.', '.', '.', '.'],
         ['N', '.', '.', '.', '.', '.']
     ]
-    
+
     # Aktualisiere verfügbare Buchstaben
     bonus_info.update_bonus_info(example_grid)
-    
+
     # Setze Bonuswort
     bonus_info.set_bonus_word("EUROPA")
-    
+
     print("=== BONUSWORT-INFORMATIONEN FÜR LLMs ===\n")
-    
+
     print(f"Verfügbare Buchstaben: {bonus_info.get_available_letters()}")
     print(f"Bonuswort-Hinweis: {bonus_info.get_bonus_word_hint()}")
     print(f"Kann Buchstabe aufdecken: {bonus_info.can_reveal_new_letter()}")
-    
+
     # Decke Buchstaben auf
     for i in range(3):
         letter = bonus_info.reveal_next_letter()
         if letter:
             print(f"Buchstabe aufgedeckt: {letter}")
             print(f"Status: {bonus_info.get_bonus_word_hint()}")
-    
+
     print(f"\nStatistiken: {bonus_info.get_bonus_statistics()}")
     print(f"\nRichtlinien: {get_bonus_word_guidelines()}")
