@@ -44,11 +44,10 @@ class ReverseRiddle(GameMode):
         """
         Reverses the answers of all questions.
         """
-        for q in riddle.questions:
-            q.answer = q.answer[::-1]
+        pass
 
     def new_question_created(self, question):
         """
-        No action needed for new questions.
+        Reverses the answer of a new question. This is done only once when the question is created.
         """
-        pass
+        question.answer = question.answer[::-1]
