@@ -12,6 +12,7 @@ from typing import Dict, List, Tuple, Optional, Set, Any
 from dataclasses import dataclass, field
 from enum import Enum
 import random
+from gamemode import GameMode
 
 
 class Orientation(Enum):
@@ -39,6 +40,7 @@ class Question:
     answer: str
     number: int = 0
     orientation: Orientation = Orientation.HORIZONTAL
+    allow_numbers: bool = False
 
     def validate(self) -> List[str]:
         """Validates the question and returns a list of errors.
@@ -54,8 +56,10 @@ class Question:
             errors.append("Antwort ist leer")
         if len(self.answer) < 2:
             errors.append("Antwort muss mindestens 2 Buchstaben lang sein")
-        if not self.answer.isalpha():
+        if not self.allow_numbers and not self.answer.isalpha():
             errors.append("Antwort darf nur Buchstaben enthalten")
+        if self.allow_numbers and not self.answer.isalnum():
+            errors.append("Antwort darf nur Buchstaben und Zahlen enthalten")
         if len(self.answer) > 20:
             errors.append("Antwort ist zu lang (max 20 Buchstaben)")
 
@@ -125,7 +129,7 @@ class KreuzwortRiddle:
         grid: A 2D list representing the crossword grid.
     """
 
-    def __init__(self, width: int = 15, height: int = 15):
+    def __init__(self, width: int = 15, height: int = 15, game_mode: Optional[GameMode] = None):
         """Initializes the KreuzwortRiddle.
 
         Args:
@@ -137,6 +141,7 @@ class KreuzwortRiddle:
         self.questions: List[Question] = []
         self.placements: List[WordPlacement] = []
         self.grid: List[List[str]] = [['' for _ in range(width)] for _ in range(height)]
+        self.game_mode = game_mode
 
     def add_question(self, question: str, answer: str, orientation: Orientation = Orientation.HORIZONTAL) -> None:
         """Adds a question with automatic validation.
@@ -150,6 +155,10 @@ class KreuzwortRiddle:
             ValidationError: If the question is invalid.
         """
         new_question = Question(question, answer, len(self.questions) + 1, orientation)
+
+        if self.game_mode:
+            self.game_mode.new_question_created(new_question)
+
         errors = new_question.validate()
 
         if errors:
@@ -181,6 +190,9 @@ class KreuzwortRiddle:
         Returns:
             True if the grid was generated successfully, False otherwise.
         """
+        if self.game_mode:
+            self.game_mode.apply(self)
+
         if not self.questions:
             return False
 
@@ -335,14 +347,22 @@ class LLMKreuzwortAPI:
     5. In case of errors, use get_problems().
     """
 
-    def __init__(self, width: int = 15, height: int = 15):
+    def __init__(self, width: int = 15, height: int = 15, game_mode: Optional[GameMode] = None):
         """Initializes the LLMKreuzwortAPI.
 
         Args:
             width: The width of the crossword grid.
             height: The height of the crossword grid.
         """
-        self.riddle = KreuzwortRiddle(width, height)
+        self.riddle = KreuzwortRiddle(width, height, game_mode)
+
+    def set_game_mode(self, game_mode: GameMode):
+        """Sets the game mode for the riddle.
+
+        Args:
+            game_mode: The game mode to set.
+        """
+        self.riddle.game_mode = game_mode
 
     def add_question(self, question: str, answer: str, orientation: str = "horizontal") -> Dict[str, Any]:
         """Adds a question.
