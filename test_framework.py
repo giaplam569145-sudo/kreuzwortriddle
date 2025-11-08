@@ -140,7 +140,67 @@ def test_grid_generation():
     print("\n=== GITTER-GENERIERUNG-TEST ABGESCHLOSSEN ===\n")
 
 
+def test_theme_based_riddle():
+    """Tests the theme-based riddle game mode."""
+    from modes import ThemeBasedRiddle
+    print("=== TEST 5: THEME-BASED RIDDLE ===\n")
+
+    api = LLMKreuzwortAPI()
+    api.set_game_mode(ThemeBasedRiddle("Capital"))
+
+    api.add_question("Capital of Norway", "Oslo", "horizontal")
+    api.add_question("Capital of Portugal", "Lisbon", "vertical")
+    api.add_question("A fruit", "Apple", "vertical")
+
+    result = api.generate()
+    print(f"Generation result: {result}")
+
+    grid = api.get_grid()
+    for row in grid:
+        print(' '.join(cell if cell else '.' for cell in row))
+
+    print("\n=== THEME-BASED RIDDLE TEST COMPLETE ===\n")
+
+
+def test_number_riddle():
+    """Tests the number riddle game mode."""
+    from modes import NumberRiddle
+    print("=== TEST 6: NUMBER RIDDLE ===\n")
+
+    api = LLMKreuzwortAPI()
+    api.set_game_mode(NumberRiddle())
+
+    result = api.add_question("Year of the first moon landing", "1969", "horizontal")
+    print(f"Result: {result}")
+
+    validation = api.validate_all()
+    print(f"Validation: {validation}")
+
+    print("\n=== NUMBER RIDDLE TEST COMPLETE ===\n")
+
+
+def test_reverse_riddle():
+    """Tests the reverse riddle game mode."""
+    from modes import ReverseRiddle
+    print("=== TEST 7: REVERSE RIDDLE ===\n")
+
+    api = LLMKreuzwortAPI()
+    api.set_game_mode(ReverseRiddle())
+
+    api.add_question("A word", "hello", "horizontal")
+    api.generate()
+
+    grid = api.get_grid()
+    for row in grid:
+        print(' '.join(cell if cell else '.' for cell in row))
+
+    print("\n=== REVERSE RIDDLE TEST COMPLETE ===\n")
+
+
 if __name__ == "__main__":
     test_basic_validation()
     test_bonus_system()
     test_grid_generation()
+    test_theme_based_riddle()
+    test_number_riddle()
+    test_reverse_riddle()
