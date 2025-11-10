@@ -4,203 +4,110 @@
 These tests demonstrate the LLM-friendly API and automatic validation.
 """
 
-from kreuzwortriddle import LLMKreuzwortAPI, ValidationError
+import unittest
+from kreuzwortriddle import LLMKreuzwortAPI, ValidationError, Question
+from modes import ThemeBasedRiddle, NumberRiddle, ReverseRiddle
+
+class TestKreuzwortRiddleAPI(unittest.TestCase):
+    """Test suite for the LLMKreuzwortAPI."""
+
+    def setUp(self):
+        """Set up a new API instance for each test."""
+        self.api = LLMKreuzwortAPI()
+
+    def test_add_valid_question(self):
+        """Test adding a valid question."""
+        result = self.api.add_question("Capital of Germany", "Berlin", "horizontal")
+        self.assertEqual(result["status"], "success")
+
+    def test_add_invalid_question(self):
+        """Test adding an invalid question."""
+        result = self.api.add_question("", "Test", "horizontal")
+        self.assertEqual(result["status"], "error")
+        self.assertIn("Question text is empty", result["message"])
+
+    def test_validate_all_with_errors(self):
+        """Test validate_all with validation errors."""
+        invalid_question = Question("Short answer", "A", 1)
+        self.api.riddle.questions.append(invalid_question)
+        result = self.api.validate_all()
+        self.assertEqual(result["status"], "validation_errors")
+        self.assertIn("Answer must be at least 2 letters long", result["errors"][0])
 
 
-def test_basic_validation():
-    """Tests the basic validation logic of the framework."""
-    api = LLMKreuzwortAPI()
+    def test_generate_grid_successfully(self):
+        """Test successful grid generation."""
+        self.api.add_question("Capital of Germany", "Berlin", "horizontal")
+        self.api.add_question("River in Germany", "Elbe", "vertical")
+        result = self.api.generate()
+        self.assertEqual(result["status"], "success")
 
-    # Test 1: Gültige Fragen
-    print("=== TEST 1: GÜLTIGE FRAGEN ===\n")
+    def test_get_problematic_questions(self):
+        """Test identifying problematic questions."""
+        self.api.add_question("No overlap", "abc", "horizontal")
+        self.api.add_question("Different letters", "def", "vertical")
+        result = self.api.get_problems()
+        self.assertEqual(result["status"], "problems_found")
+        self.assertIn("has no common letters", result["problems"][0][1])
 
-    # Erfolgreiche Fragen
-    result1 = api.add_question(
-        "Hauptstadt von Deutschland",
-        "Berlin",
-        "horizontal"
-    )
-    print(f"Test 1 - Gültige Frage: {result1}")
+    def test_grid_generation_with_intersections(self):
+        """Test that grid generation works with intersecting words."""
+        self.api.add_question("Capital of Germany", "Berlin", "horizontal")
+        self.api.add_question("Capital of Italy", "Rome", "vertical")
+        result = self.api.generate()
+        self.assertEqual(result["status"], "success")
 
-    # Test 2: Ungültige Frage (leer)
-    result2 = api.add_question("", "Test", "horizontal")
-    print(f"Test 2 - Ungültige Frage (leer): {result2}")
+class TestBonusSystem(unittest.TestCase):
+    """Test suite for the BonusRevealSystem."""
 
-    # Test 3: Problem mit Überschneidungen
-    result3 = api.add_question(
-        "Hauptstadt von Frankreich",
-        "Paris",
-        "vertical"
-    )
-    print(f"Test 3 - Gültige vertikale Frage: {result3}")
+    def setUp(self):
+        """Set up a new API instance for each test."""
+        self.api = LLMKreuzwortAPI()
 
-    # Validierung
-    validation = api.validate_all()
-    print(f"Validierungsergebnis: {validation}")
+    def test_set_bonus_word(self):
+        """Test setting the bonus word."""
+        self.api.set_bonus_word("EUROPA")
+        self.assertEqual(self.api.get_bonus_word_hint(), "Bonus word: ______")
 
-    # Test 4: Identifikation "fauler" Fragen
-    problems = api.get_problems()
-    print(f"Identifizierte Probleme: {problems}")
+    def test_reveal_bonus_letter(self):
+        """Test revealing a bonus letter."""
+        self.api.add_question("Capital of Germany", "Berlin", "horizontal")
+        self.api.generate()
+        self.api.set_bonus_word("BERLIN")
+        letter = self.api.reveal_next_bonus_letter()
+        self.assertEqual(letter, "B")
+        self.assertEqual(self.api.get_bonus_word_hint(), "Bonus word: B_____")
 
-    # Test 5: Generierung
-    generation = api.generate()
-    print(f"Generierungsergebnis: {generation}")
+class TestGameModes(unittest.TestCase):
+    """Test suite for the game modes."""
 
-    print("\n=== TEST 2: VALIDIERUNGSFEHLER ===\n")
+    def setUp(self):
+        """Set up a new API instance for each test."""
+        self.api = LLMKreuzwortAPI()
 
-    # Ungültige Fragen testen
-    print("\n=== TEST 2: UNGÜLTIGE FRAGEN ===\n")
+    def test_theme_based_riddle(self):
+        """Test the theme-based riddle game mode."""
+        self.api.set_game_mode(ThemeBasedRiddle("Capital"))
+        self.api.add_question("Capital of Norway", "Oslo", "horizontal")
+        self.api.add_question("A fruit", "Apple", "vertical")
+        self.api.generate()
+        placements = self.api.get_placements()
+        self.assertEqual(len(placements), 1)
+        self.assertEqual(placements[0]["answer"], "Oslo")
 
-    # Diese Tests zeigen die LLM-freundliche Fehlerbehandlung
+    def test_number_riddle(self):
+        """Test the number riddle game mode."""
+        self.api.set_game_mode(NumberRiddle())
+        result = self.api.add_question("Year of the first moon landing", "1969", "horizontal")
+        self.assertEqual(result["status"], "success")
 
-    # Test mit nicht-alphabetischen Zeichen
-    result4 = api.add_question(
-        "Frage mit Zahlen",
-        "Test123",
-        "horizontal"
-    )
-    print(f"Test 4 - Ungültige Antwort (mit Zahlen): {result4}")
-
-    # Test mit zu kurzer Antwort
-    result5 = api.add_question(
-        "Zu kurze Antwort",
-        "A",
-        "horizontal"
-    )
-    print(f"Test 5 - Zu kurze Antwort: {result5}")
-
-    # Test mit zu langer Antwort
-    result6 = api.add_question(
-        "Zu lange Antwort",
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
-        "horizontal"
-    )
-    print(f"Test 6 - Zu lange Antwort: {result6}")
-
-    print("\n=== FRAMEWORK TEST ABGESCHLOSSEN ===\n")
-
-
-def test_bonus_system():
-    """Tests the bonus word system."""
-    from kreuzwortriddle import BonusRevealSystem
-
-    print("=== TEST 3: BONUSWORT-SYSTEM ===\n")
-
-    bonus_system = BonusRevealSystem()
-    bonus_system.set_bonus_word("EUROPA")
-
-    print(f"Bonuswort gesetzt: {bonus_system.get_bonus_word_hint()}")
-
-    # Simuliere einige verfügbare Buchstaben
-    bonus_system.available_letters = {'E', 'U', 'R', 'O', 'P', 'A'}
-
-    print(f"Kann Buchstabe aufdecken: {bonus_system.can_reveal_bonus_letter()}")
-
-    # Decke Buchstaben auf
-    for i in range(3):
-        letter = bonus_system.reveal_next_letter()
-        print(f"Buchstabe aufgedeckt: {letter}")
-        print(f"Status: {bonus_system.get_bonus_word_hint()}")
-
-    print("\n=== BONUSWORT-TEST ABGESCHLOSSEN ===\n")
-
-
-def test_grid_generation():
-    """Tests the grid generation."""
-    print("=== TEST 4: GITTER-GENERIERUNG ===\n")
-
-    api = LLMKreuzwortAPI(width=10, height=10)
-
-    # Füge Fragen hinzu, die sich kreuzen können
-    questions = [
-        ("Hauptstadt von Deutschland", "Berlin", "horizontal"),
-        ("Fluss in Deutschland", "Elbe", "vertical"),
-        ("Bundesland", "Bayern", "horizontal"),
-        ("Gebirge", "Alpen", "vertical")
-    ]
-
-    for question, answer, orientation in questions:
-        result = api.add_question(question, answer, orientation)
-        print(f"Frage hinzugefügt: {result}")
-
-    # Generiere das Gitter
-    generation = api.generate()
-    print(f"Generierung: {generation}")
-
-    if generation["status"] == "success":
-        grid = api.get_grid()
-        placements = api.get_placements()
-
-        print("\nGitter:")
-        for row in grid:
-            print(' '.join(cell if cell else '.' for cell in row))
-
-        print(f"\nPlatzierungen: {placements}")
-
-    print("\n=== GITTER-GENERIERUNG-TEST ABGESCHLOSSEN ===\n")
-
-
-def test_theme_based_riddle():
-    """Tests the theme-based riddle game mode."""
-    from modes import ThemeBasedRiddle
-    print("=== TEST 5: THEME-BASED RIDDLE ===\n")
-
-    api = LLMKreuzwortAPI()
-    api.set_game_mode(ThemeBasedRiddle("Capital"))
-
-    api.add_question("Capital of Norway", "Oslo", "horizontal")
-    api.add_question("Capital of Portugal", "Lisbon", "vertical")
-    api.add_question("A fruit", "Apple", "vertical")
-
-    result = api.generate()
-    print(f"Generation result: {result}")
-
-    grid = api.get_grid()
-    for row in grid:
-        print(' '.join(cell if cell else '.' for cell in row))
-
-    print("\n=== THEME-BASED RIDDLE TEST COMPLETE ===\n")
-
-
-def test_number_riddle():
-    """Tests the number riddle game mode."""
-    from modes import NumberRiddle
-    print("=== TEST 6: NUMBER RIDDLE ===\n")
-
-    api = LLMKreuzwortAPI()
-    api.set_game_mode(NumberRiddle())
-
-    result = api.add_question("Year of the first moon landing", "1969", "horizontal")
-    print(f"Result: {result}")
-
-    validation = api.validate_all()
-    print(f"Validation: {validation}")
-
-    print("\n=== NUMBER RIDDLE TEST COMPLETE ===\n")
-
-
-def test_reverse_riddle():
-    """Tests the reverse riddle game mode."""
-    from modes import ReverseRiddle
-    print("=== TEST 7: REVERSE RIDDLE ===\n")
-
-    api = LLMKreuzwortAPI()
-    api.set_game_mode(ReverseRiddle())
-
-    api.add_question("A word", "hello", "horizontal")
-    api.generate()
-
-    grid = api.get_grid()
-    for row in grid:
-        print(' '.join(cell if cell else '.' for cell in row))
-
-    print("\n=== REVERSE RIDDLE TEST COMPLETE ===\n")
-
+    def test_reverse_riddle(self):
+        """Test the reverse riddle game mode."""
+        self.api.set_game_mode(ReverseRiddle())
+        self.api.add_question("A word", "hello", "horizontal")
+        self.api.generate()
+        placements = self.api.get_placements()
+        self.assertEqual(placements[0]["answer"], "olleh")
 
 if __name__ == "__main__":
-    test_basic_validation()
-    test_bonus_system()
-    test_grid_generation()
-    test_theme_based_riddle()
-    test_number_riddle()
-    test_reverse_riddle()
+    unittest.main()

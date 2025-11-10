@@ -10,7 +10,7 @@ class ThemeBasedRiddle(GameMode):
 
     def apply(self, riddle):
         """
-        Applies the theme-based logic to the riddle.
+        Filters questions based on the theme.
         """
         riddle.questions = [
             q for q in riddle.questions if self.theme.lower() in q.question_text.lower()
@@ -44,10 +44,11 @@ class ReverseRiddle(GameMode):
         """
         Reverses the answers of all questions.
         """
-        pass
+        for question in riddle.questions:
+            question.answer = question.answer[::-1]
 
     def new_question_created(self, question):
         """
-        Reverses the answer of a new question. This is done only once when the question is created.
+        This hook is not used in this game mode.
         """
-        question.answer = question.answer[::-1]
+        pass
