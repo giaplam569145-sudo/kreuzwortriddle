@@ -5,7 +5,8 @@ These tests demonstrate the LLM-friendly API and automatic validation.
 """
 
 import unittest
-from kreuzwortriddle import LLMKreuzwortAPI, ValidationError, Question
+from kreuzwortriddle import LLMKreuzwortAPI
+from models import ValidationError, Question
 from modes import ThemeBasedRiddle, NumberRiddle, ReverseRiddle
 
 class TestKreuzwortRiddleAPI(unittest.TestCase):
