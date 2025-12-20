@@ -1,4 +1,5 @@
 from gamemode import GameMode
+from models import Question, Orientation
 
 class ThemeBasedRiddle(GameMode):
     """
@@ -28,7 +29,7 @@ class NumberRiddle(GameMode):
         """
         pass
 
-    def new_question_created(self, question):
+    def new_question_created(self, question: Question):
         """
         Allows numbers in the answers for new questions.
         """
@@ -47,7 +48,7 @@ class ReverseRiddle(GameMode):
         for question in riddle.questions:
             question.answer = question.answer[::-1]
 
-    def new_question_created(self, question):
+    def new_question_created(self, question: Question):
         """
         This hook is not used in this game mode.
         """
