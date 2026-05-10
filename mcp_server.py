@@ -7,17 +7,17 @@ Stdio-basierter MCP-Server für Integration in MCP-fähige Entwicklungsumgebunge
 Autor: Qwen Code (2025)
 """
 
+import asyncio
 import json
 import sys
-import asyncio
-from typing import Dict, Any, List
+from typing import Any, Dict, List
 
-from kreuzwortriddle import LLMKreuzwortAPI, BonusRevealSystem
+from kreuzwortriddle import BonusRevealSystem, LLMKreuzwortAPI
 
 try:
     from mcp.server import Server
     from mcp.server.models import InitializationOptions
-    from mcp.types import Tool, TextContent
+    from mcp.types import TextContent, Tool
     HAS_MCP = True
 except ImportError:
     HAS_MCP = False
@@ -25,17 +25,17 @@ except ImportError:
 
 class KreuzwortRiddleMCPServer:
     """MCP-Server über stdio-Protokoll."""
-    
+
     def __init__(self):
         self.api = LLMKreuzwortAPI()
         self.bonus_system = BonusRevealSystem()
         if HAS_MCP:
             self.server = Server("kreuzwort-riddle-framework")
             self._register_tools()
-    
+
     def _register_tools(self):
         """Registriert alle verfügbaren MCP-Tools"""
-        
+
         @self.server.list_tools()
         async def list_tools() -> List[Tool]:
             return [
@@ -47,7 +47,11 @@ class KreuzwortRiddleMCPServer:
                         "properties": {
                             "question": {"type": "string", "description": "Der Fragetext"},
                             "answer": {"type": "string", "description": "Die Antwort (nur Buchstaben, 2-20 Zeichen)"},
-                            "orientation": {"type": "string", "enum": ["horizontal", "vertical"], "default": "horizontal"}
+                            "orientation": {
+                                "type": "string",
+                                "enum": ["horizontal", "vertical"],
+                                "default": "horizontal"
+                            }
                         },
                         "required": ["question", "answer"]
                     }
@@ -95,28 +99,29 @@ class KreuzwortRiddleMCPServer:
                     inputSchema={"type": "object", "properties": {}}
                 )
             ]
-        
+
         @self.server.call_tool()
         async def call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
             try:
                 result = self._dispatch(name, arguments)
                 return [TextContent(type="text", text=json.dumps(result, indent=2))]
             except Exception as e:
-                return [TextContent(type="text", text=json.dumps({"status": "error", "message": f"Tool-Fehler: {str(e)}"}, indent=2))]
-    
+                err = {"status": "error", "message": f"Tool-Fehler: {str(e)}"}
+                return [TextContent(type="text", text=json.dumps(err, indent=2))]
+
     def _dispatch(self, name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
         """Zentrale Tool-Dispatch-Methode."""
-        
+
         if name == "add_question":
             return self.api.add_question(
                 arguments.get("question", ""),
                 arguments.get("answer", ""),
                 arguments.get("orientation", "horizontal")
             )
-        
+
         elif name == "validate_all":
             return self.api.validate_all()
-        
+
         elif name == "generate_riddle":
             result = self.api.generate()
             if result["status"] == "success":
@@ -124,10 +129,10 @@ class KreuzwortRiddleMCPServer:
                 result["placements"] = self.api.get_placements()
                 self.bonus_system.update_available_letters(self.api.get_grid())
             return result
-        
+
         elif name == "get_problems":
             return self.api.get_problems()
-        
+
         elif name == "set_bonus_word":
             bonus_word = arguments.get("bonus_word", "")
             self.bonus_system.set_bonus_word(bonus_word)
@@ -136,7 +141,7 @@ class KreuzwortRiddleMCPServer:
                 "message": f"Bonuswort '{bonus_word}' gesetzt",
                 "bonus_info": self.bonus_system.get_bonus_letter_info()
             }
-        
+
         elif name == "reveal_bonus_letter":
             if not self.bonus_system.can_reveal_bonus_letter():
                 return {"status": "error", "message": "Keine weiteren Buchstaben verfügbar"}
@@ -147,7 +152,7 @@ class KreuzwortRiddleMCPServer:
                 "hint": self.bonus_system.get_bonus_word_hint(),
                 "bonus_info": self.bonus_system.get_bonus_letter_info()
             }
-        
+
         elif name == "get_status":
             return {
                 "status": "running",
@@ -157,23 +162,23 @@ class KreuzwortRiddleMCPServer:
                 "bonus_word_set": bool(self.bonus_system.bonus_word),
                 "bonus_info": self.bonus_system.get_bonus_letter_info()
             }
-        
+
         elif name == "reset_framework":
             self.api = LLMKreuzwortAPI()
             self.bonus_system = BonusRevealSystem()
             return {"status": "success", "message": "Framework erfolgreich zurückgesetzt"}
-        
+
         else:
             return {"status": "error", "message": f"Unbekanntes Tool: {name}"}
-    
+
     async def run_stdio(self):
         """Startet den MCP-Server über stdio."""
         if not HAS_MCP:
             print("Fehler: 'mcp' Paket nicht installiert. pip install mcp", file=sys.stderr)
             sys.exit(1)
-        
+
         from mcp.server.stdio import stdio_server
-        
+
         async with stdio_server() as (read_stream, write_stream):
             await self.server.run(
                 read_stream,

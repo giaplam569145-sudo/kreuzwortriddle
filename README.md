@@ -238,14 +238,18 @@ if validation["status"] == "valid":
 ## Testing
 
 ```bash
-# Framework-Tests
-python test_framework.py
+# Pytest-Tests (32 Tests)
+pytest test_framework.py -v
 
 # Beispiel-Nutzung
 python example_usage.py
 
 # Bonuswort-Beispiele
 python bonus_example.py
+
+# Lint & Type Check
+python -m ruff check .
+python -m mypy kreuzwortriddle.py
 ```
 
 ## Architektur

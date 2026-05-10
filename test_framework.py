@@ -1,75 +1,44 @@
 #!/usr/bin/env python3
 """
-Testfälle für das Kreuzwort-Riddle Framework
-
-Print-basierte Tests mit Assertions.
+Pytest-Tests fuer das Kreuzwort-Riddle Framework
 """
 
-from kreuzwortriddle import LLMKreuzwortAPI, BonusRevealSystem, BonusWordConstraints, ValidationError
+import pytest
 
-passed = 0
-failed = 0
+from kreuzwortriddle import (
+    BonusRevealSystem,
+    BonusWordConstraints,
+    KreuzwortRiddle,
+    LLMKreuzwortAPI,
+    ValidationError,
+)
 
+# ── Fixtures ──────────────────────────────────────────────────────────
 
-def assert_test(name: str, condition: bool, detail: str = ""):
-    global passed, failed
-    if condition:
-        passed += 1
-        print(f"  PASS: {name}")
-    else:
-        failed += 1
-        msg = f"  FAIL: {name}"
-        if detail:
-            msg += f" — {detail}"
-        print(msg)
+@pytest.fixture
+def api():
+    return LLMKreuzwortAPI()
 
 
-def test_basic_validation():
-    """Testet die grundlegende Validierungslogik"""
-    print("=== TEST 1: GÜLTIGE FRAGEN ===\n")
-
-    api = LLMKreuzwortAPI()
-
-    result1 = api.add_question("Hauptstadt von Deutschland", "Berlin", "horizontal")
-    assert_test("Gültige Frage hinzugefügt", result1["status"] == "success", str(result1))
-
-    result2 = api.add_question("", "Test", "horizontal")
-    assert_test("Leere Frage abgelehnt", result2["status"] == "error", str(result2))
-
-    result3 = api.add_question("Hauptstadt von Frankreich", "Paris", "vertical")
-    assert_test("Vertikale Frage hinzugefügt", result3["status"] == "success", str(result3))
-
-    validation = api.validate_all()
-    assert_test("Validierung OK", validation["status"] == "valid", str(validation))
-
-    problems = api.get_problems()
-    assert_test("Keine problematischen Fragen", problems["status"] == "no_problems", str(problems))
-
-    generation = api.generate()
-    assert_test("Generierung erfolgreich", generation["status"] == "success", str(generation))
-
-    print("\n=== TEST 2: VALIDIERUNGSFEHLER ===\n")
-
-    result4 = api.add_question("Frage mit Zahlen", "Test123", "horizontal")
-    assert_test("Nicht-alphabetische Antwort abgelehnt", result4["status"] == "error")
-
-    result5 = api.add_question("Zu kurze Antwort", "A", "horizontal")
-    assert_test("Zu kurze Antwort abgelehnt", result5["status"] == "error")
-
-    result6 = api.add_question("Zu lange Antwort", "ABCDEFGHIJKLMNOPQRSTUVWXYZ", "horizontal")
-    assert_test("Zu lange Antwort abgelehnt", result6["status"] == "error")
+@pytest.fixture
+def api_with_words():
+    a = LLMKreuzwortAPI(width=15, height=15)
+    a.add_question("Hauptstadt von Deutschland", "Berlin", "horizontal")
+    a.add_question("Fluss in Deutschland", "Elbe", "vertical")
+    a.add_question("Bundesland", "Bayern", "horizontal")
+    a.add_question("Gebirge", "Alpen", "vertical")
+    return a
 
 
-def test_bonus_system():
-    """Testet das Bonuswort-System"""
-    print("\n=== TEST 3: BONUSWORT-SYSTEM ===\n")
+@pytest.fixture
+def bonus():
+    return BonusRevealSystem()
 
-    bonus_system = BonusRevealSystem()
-    bonus_system.set_bonus_word("EUROPA")
 
-    assert_test("Bonuswort gesetzt", bonus_system.bonus_word == "EUROPA")
-    assert_test("Hint zeigt Unterstriche", "_" in bonus_system.get_bonus_word_hint())
-
+@pytest.fixture
+def bonus_with_grid():
+    b = BonusRevealSystem()
+    b.set_bonus_word("EUROPA")
     sim_grid = [
         ['', 'E', '', '', '', ''],
         ['', '', '', '', '', ''],
@@ -78,90 +47,179 @@ def test_bonus_system():
         ['', 'P', '', 'A', '', ''],
         ['', '', '', '', '', ''],
     ]
-    bonus_system.update_available_letters(sim_grid)
-
-    assert_test("available_letters nicht leer", len(bonus_system.available_letters) > 0,
-                f"available_letters: {bonus_system.available_letters}")
-    assert_test("can_reveal_bonus_letter ist True", bonus_system.can_reveal_bonus_letter())
-
-    letter1 = bonus_system.reveal_next_letter()
-    assert_test("Erster Buchstabe aufgedeckt", letter1 is not None, f"letter={letter1}")
-    assert_test("revealed_positions befüllt", len(bonus_system.revealed_positions) > 0,
-                f"positions: {bonus_system.revealed_positions}")
-
-    letter2 = bonus_system.reveal_next_letter()
-    assert_test("Zweiter Buchstabe aufgedeckt", letter2 is not None, f"letter={letter2}")
-
-    letter3 = bonus_system.reveal_next_letter()
-    assert_test("Dritter Buchstabe aufgedeckt", letter3 is not None, f"letter={letter3}")
-
-    print(f"  Bonuswort-Status: {bonus_system.get_bonus_word_hint()}")
+    b.update_available_letters(sim_grid)
+    return b
 
 
-def test_grid_generation():
-    """Testet die Gitter-Generierung"""
-    print("\n=== TEST 4: GITTER-GENERIERUNG ===\n")
-
-    api = LLMKreuzwortAPI(width=15, height=15)
-
-    questions = [
-        ("Hauptstadt von Deutschland", "Berlin", "horizontal"),
-        ("Fluss in Deutschland", "Elbe", "vertical"),
-        ("Bundesland", "Bayern", "horizontal"),
-        ("Gebirge", "Alpen", "vertical")
-    ]
-
-    for question, answer, orientation in questions:
-        result = api.add_question(question, answer, orientation)
-        assert_test(f"Frage '{answer}' hinzugefügt", result["status"] == "success")
-
-    generation = api.generate()
-    assert_test("Gitter-Generierung erfolgreich", generation["status"] == "success",
-                str(generation))
-
-    if generation["status"] == "success":
-        grid = api.get_grid()
-        placements = api.get_placements()
-
-        assert_test("Alle 4 Wörter platziert", len(placements) == 4,
-                    f"nur {len(placements)} platziert")
-
-        print("\n  Gitter:")
-        for row in grid:
-            print('  ' + ' '.join(cell if cell else '.' for cell in row))
-
-        print(f"\n  Platzierungen: {len(placements)}")
-        for p in placements:
-            print(f"  - {p['answer']} ({p['orientation']}) an ({p['x']},{p['y']})")
+@pytest.fixture
+def constraints():
+    return BonusWordConstraints()
 
 
-def test_constraints():
-    """Testet BonusWordConstraints"""
-    print("\n=== TEST 5: BONUSWORT-EINSCHRÄNKUNGEN ===\n")
+# ── Validierung ───────────────────────────────────────────────────────
 
-    constraints = BonusWordConstraints()
+class TestValidierung:
+    def test_gueltige_frage(self, api):
+        result = api.add_question("Hauptstadt", "Berlin", "horizontal")
+        assert result["status"] == "success"
 
-    assert_test("max_bonus_length=8", constraints.max_bonus_length == 8)
-    assert_test("min_bonus_length=3", constraints.min_bonus_length == 3)
-    assert_test("calculate_max(5)=5", constraints.calculate_max_bonus_length(5) == 5)
-    assert_test("calculate_max(2)=3", constraints.calculate_max_bonus_length(2) == 3)
+    def test_leere_frage(self, api):
+        result = api.add_question("", "Test", "horizontal")
+        assert result["status"] == "error"
 
-    errors = constraints.validate_bonus_word("EUROPA", {'E', 'U', 'R', 'O', 'P', 'A'})
-    assert_test("Gültiges Bonuswort", len(errors) == 0, str(errors))
+    def test_vertikale_frage(self, api):
+        result = api.add_question("Stadt", "Paris", "vertical")
+        assert result["status"] == "success"
 
-    errors = constraints.validate_bonus_word("XYZ", {'E', 'U', 'R'})
-    assert_test("Ungültiges Bonuswort erkannt", len(errors) > 0, str(errors))
+    def test_validate_all_ok(self, api):
+        api.add_question("Frage1", "Berlin", "horizontal")
+        api.add_question("Frage2", "Paris", "vertical")
+        assert api.validate_all()["status"] == "valid"
+
+    def test_keine_probleme(self, api):
+        api.add_question("Frage1", "Berlin", "horizontal")
+        api.add_question("Frage2", "Paris", "vertical")
+        assert api.get_problems()["status"] == "no_problems"
+
+    def test_antwort_mit_zahlen(self, api):
+        result = api.add_question("Frage", "Test123", "horizontal")
+        assert result["status"] == "error"
+
+    def test_zu_kurz(self, api):
+        result = api.add_question("Frage", "A", "horizontal")
+        assert result["status"] == "error"
+
+    def test_zu_lang(self, api):
+        result = api.add_question("Frage", "A" * 21, "horizontal")
+        assert result["status"] == "error"
+
+    def test_validation_error_raised(self):
+        r = KreuzwortRiddle()
+        with pytest.raises(ValidationError):
+            r.add_question("", "Test")
 
 
-if __name__ == "__main__":
-    test_basic_validation()
-    test_bonus_system()
-    test_grid_generation()
-    test_constraints()
+# ── Gitter-Generierung ───────────────────────────────────────────────
 
-    print(f"\n{'='*50}")
-    print(f"ERGEBNIS: {passed} bestanden, {failed} fehlgeschlagen")
-    print(f"{'='*50}")
+class TestGitterGenerierung:
+    def test_vier_woerter(self, api_with_words):
+        result = api_with_words.generate()
+        assert result["status"] == "success"
 
-    if failed > 0:
-        exit(1)
+    def test_alle_platziert(self, api_with_words):
+        api_with_words.generate()
+        assert len(api_with_words.get_placements()) == 4
+
+    def test_zwei_woerter(self):
+        a = LLMKreuzwortAPI()
+        a.add_question("Stadt", "Berlin", "horizontal")
+        a.add_question("Fluss", "Elbe", "vertical")
+        assert a.generate()["status"] == "success"
+
+    def test_keine_fragen(self):
+        a = LLMKreuzwortAPI()
+        assert a.generate()["status"] == "generation_failed"
+
+    def test_kein_erreichtes_wort(self):
+        a = LLMKreuzwortAPI()
+        a.add_question("Frage1", "Berlin", "horizontal")
+        a.add_question("Frage2", "Tokyo", "vertical")
+        a.add_question("Frage3", "Quiz", "horizontal")
+        assert a.generate()["status"] == "generation_failed"
+
+    def test_gitter_nicht_leer(self, api_with_words):
+        api_with_words.generate()
+        grid = api_with_words.get_grid()
+        non_empty = sum(1 for row in grid for cell in row if cell)
+        assert non_empty > 0
+
+    def test_platzierungen_kreuzen(self, api_with_words):
+        api_with_words.generate()
+        placements = api_with_words.get_placements()
+        horiz = [p for p in placements if p["orientation"] == "horizontal"]
+        vert = [p for p in placements if p["orientation"] == "vertical"]
+        assert len(horiz) >= 1
+        assert len(vert) >= 1
+
+
+# ── Problematische Fragen ────────────────────────────────────────────
+
+class TestProbleme:
+    def test_problem_erkannt(self):
+        a = LLMKreuzwortAPI()
+        a.add_question("Frage", "Berlin", "horizontal")
+        a.add_question("Frage2", "Wado", "vertical")
+        problems = a.get_problems()
+        assert problems["status"] == "problems_found"
+
+
+# ── Bonuswort-System ─────────────────────────────────────────────────
+
+class TestBonusSystem:
+    def test_set_bonus_word(self, bonus):
+        bonus.set_bonus_word("EUROPA")
+        assert bonus.bonus_word == "EUROPA"
+
+    def test_hint_zeigt_unterstriche(self, bonus):
+        bonus.set_bonus_word("EUROPA")
+        assert "_" in bonus.get_bonus_word_hint()
+
+    def test_available_letters(self, bonus_with_grid):
+        assert len(bonus_with_grid.available_letters) > 0
+
+    def test_can_reveal(self, bonus_with_grid):
+        assert bonus_with_grid.can_reveal_bonus_letter() is True
+
+    def test_reveal_erster_buchstabe(self, bonus_with_grid):
+        letter = bonus_with_grid.reveal_next_letter()
+        assert letter is not None
+
+    def test_revealed_positions_befuellt(self, bonus_with_grid):
+        bonus_with_grid.reveal_next_letter()
+        assert len(bonus_with_grid.revealed_positions) > 0
+
+    def test_reveal_mehrere_buchstaben(self, bonus_with_grid):
+        letters = []
+        for _ in range(3):
+            letter = bonus_with_grid.reveal_next_letter()
+            if letter:
+                letters.append(letter)
+        assert len(letters) == 3
+
+    def test_reveal_ohne_available(self):
+        b = BonusRevealSystem()
+        b.set_bonus_word("TEST")
+        assert b.can_reveal_bonus_letter() is False
+
+    def test_reveal_ohne_bonus(self):
+        b = BonusRevealSystem()
+        b.available_letters = {'A'}
+        assert b.can_reveal_bonus_letter() is False
+
+
+# ── BonusWordConstraints ─────────────────────────────────────────────
+
+class TestConstraints:
+    def test_defaults(self, constraints):
+        assert constraints.max_bonus_length == 8
+        assert constraints.min_bonus_length == 3
+
+    def test_calculate_max(self, constraints):
+        assert constraints.calculate_max_bonus_length(5) == 5
+        assert constraints.calculate_max_bonus_length(2) == 3
+
+    def test_gueltiges_bonuswort(self, constraints):
+        errors = constraints.validate_bonus_word("EUROPA", {'E', 'U', 'R', 'O', 'P', 'A'})
+        assert len(errors) == 0
+
+    def test_ungueltiges_bonuswort(self, constraints):
+        errors = constraints.validate_bonus_word("XYZ", {'E', 'U', 'R'})
+        assert len(errors) > 0
+
+    def test_leeres_bonuswort(self, constraints):
+        errors = constraints.validate_bonus_word("", set())
+        assert len(errors) > 0
+
+    def test_zu_kurzes_bonuswort(self, constraints):
+        errors = constraints.validate_bonus_word("AB", {'A', 'B'})
+        assert len(errors) > 0

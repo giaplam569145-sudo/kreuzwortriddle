@@ -2,12 +2,12 @@
 """
 Beispiel-Nutzung des Kreuzwort-Riddle Frameworks für LLMs
 
-Dieses Beispiel zeigt, wie LLMs das Framework nutzen können, um sich auf das Wesentliche zu konzentrieren: Fragen und Antworten.
+Dieses Beispiel zeigt, wie LLMs das Framework nutzen koennen, um sich auf Fragen und Antworten zu konzentrieren.
 
 Autor: Qwen Code (2025)
 """
 
-from kreuzwortriddle import LLMKreuzwortAPI, BonusRevealSystem
+from kreuzwortriddle import BonusRevealSystem, LLMKreuzwortAPI
 
 # Framework initialisieren
 print("=== KREUZWORT-RIDDLE FRAMEWORK BEISPIEL ===\n")
@@ -107,7 +107,7 @@ if generation["status"] == "success":
     bonus_system.update_available_letters(api.get_grid())
     print(f"Bonuswort-Info: {bonus_system.get_bonus_letter_info()}")
     print(f"Bonuswort-Hinweis: {bonus_system.get_bonus_word_hint()}")
-    
+
     # Simuliere Buchstaben-Enthüllung
     for i in range(3):
         if bonus_system.can_reveal_bonus_letter():
@@ -120,10 +120,10 @@ if generation["status"] == "success":
     print("\n=== GENERIERTES GITTER ===\n")
     grid = api.get_grid()
     placements = api.get_placements()
-    
+
     for row in grid:
         print(' '.join(cell if cell else '.' for cell in row))
-    
+
     print(f"\nPlatzierungen: {len(placements)} Wörter platziert")
 
 print("\n=== FRAMEWORK ERFOLGREICH INITIALISIERT ===\n")
