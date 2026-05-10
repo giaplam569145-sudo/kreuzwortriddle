@@ -2,40 +2,42 @@
 """
 MCP-Server für das Kreuzwort-Riddle Framework
 
-Ermöglicht die Integration des Frameworks in MCP-fähige Entwicklungsumgebungen.
+Stdio-basierter MCP-Server für Integration in MCP-fähige Entwicklungsumgebungen.
 
 Autor: Qwen Code (2025)
 """
 
 import json
+import sys
 import asyncio
 from typing import Dict, Any, List
-from mcp.server import Server
-from mcp.server.models import InitializationOptions
-from mcp.types import Tool, TextContent
 
 from kreuzwortriddle import LLMKreuzwortAPI, BonusRevealSystem
 
+try:
+    from mcp.server import Server
+    from mcp.server.models import InitializationOptions
+    from mcp.types import Tool, TextContent
+    HAS_MCP = True
+except ImportError:
+    HAS_MCP = False
+
 
 class KreuzwortRiddleMCPServer:
-    """
-    MCP-Server der die Framework-Funktionalitäten über MCP verfügbar macht.
-    """
+    """MCP-Server über stdio-Protokoll."""
     
     def __init__(self):
         self.api = LLMKreuzwortAPI()
         self.bonus_system = BonusRevealSystem()
-        self.server = Server("kreuzwort-riddle-framework", InitializationOptions())
-        
-        # Registriere die Tools
-        self._register_tools()
+        if HAS_MCP:
+            self.server = Server("kreuzwort-riddle-framework")
+            self._register_tools()
     
     def _register_tools(self):
         """Registriert alle verfügbaren MCP-Tools"""
         
         @self.server.list_tools()
         async def list_tools() -> List[Tool]:
-            """Listet alle verfügbaren Tools auf"""
             return [
                 Tool(
                     name="add_question",
@@ -43,20 +45,9 @@ class KreuzwortRiddleMCPServer:
                     inputSchema={
                         "type": "object",
                         "properties": {
-                            "question": {
-                                "type": "string",
-                                "description": "Der Fragetext"
-                            },
-                            "answer": {
-                                "type": "string",
-                                "description": "Die Antwort (nur Buchstaben, 2-20 Zeichen)"
-                            },
-                            "orientation": {
-                                "type": "string",
-                                "enum": ["horizontal", "vertical"],
-                                "description": "Ausrichtung des Wortes",
-                                "default": "horizontal"
-                            }
+                            "question": {"type": "string", "description": "Der Fragetext"},
+                            "answer": {"type": "string", "description": "Die Antwort (nur Buchstaben, 2-20 Zeichen)"},
+                            "orientation": {"type": "string", "enum": ["horizontal", "vertical"], "default": "horizontal"}
                         },
                         "required": ["question", "answer"]
                     }
@@ -64,26 +55,17 @@ class KreuzwortRiddleMCPServer:
                 Tool(
                     name="validate_all",
                     description="Validiert alle hinzugefügten Fragen",
-                    inputSchema={
-                        "type": "object",
-                        "properties": {}
-                    }
+                    inputSchema={"type": "object", "properties": {}}
                 ),
                 Tool(
                     name="generate_riddle",
                     description="Generiert das Kreuzworträtsel",
-                    inputSchema={
-                        "type": "object",
-                        "properties": {}
-                    }
+                    inputSchema={"type": "object", "properties": {}}
                 ),
                 Tool(
                     name="get_problems",
                     description="Identifiziert problematische Fragen",
-                    inputSchema={
-                        "type": "object",
-                        "properties": {}
-                    }
+                    inputSchema={"type": "object", "properties": {}}
                 ),
                 Tool(
                     name="set_bonus_word",
@@ -91,14 +73,8 @@ class KreuzwortRiddleMCPServer:
                     inputSchema={
                         "type": "object",
                         "properties": {
-                            "bonus_word": {
-                                "type": "string",
-                                "description": "Das Bonuswort"
-                            },
-                            "description": {
-                                "type": "string",
-                                "description": "Beschreibung des Bonuswortes"
-                            }
+                            "bonus_word": {"type": "string", "description": "Das Bonuswort"},
+                            "description": {"type": "string", "description": "Beschreibung des Bonuswortes"}
                         },
                         "required": ["bonus_word"]
                     }
@@ -106,148 +82,106 @@ class KreuzwortRiddleMCPServer:
                 Tool(
                     name="reveal_bonus_letter",
                     description="Deckt den nächsten Buchstaben des Bonuswortes auf",
-                    inputSchema={
-                        "type": "object",
-                        "properties": {}
-                    }
+                    inputSchema={"type": "object", "properties": {}}
                 ),
                 Tool(
                     name="get_status",
                     description="Gibt den aktuellen Status des Frameworks zurück",
-                    inputSchema={
-                        "type": "object",
-                        "properties": {}
-                    }
+                    inputSchema={"type": "object", "properties": {}}
                 ),
                 Tool(
                     name="reset_framework",
                     description="Setzt das Framework zurück",
-                    inputSchema={
-                        "type": "object",
-                        "properties": {}
-                    }
+                    inputSchema={"type": "object", "properties": {}}
                 )
             ]
         
         @self.server.call_tool()
         async def call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
-            """Verarbeitet Tool-Aufrufe"""
-            
             try:
-                if name == "add_question":
-                    result = self.api.add_question(
-                        arguments.get("question", ""),
-                        arguments.get("answer", ""),
-                        arguments.get("orientation", "horizontal")
-                    )
-                    return [TextContent(type="text", text=json.dumps(result, indent=2))]
-                
-                elif name == "validate_all":
-                    result = self.api.validate_all()
-                    return [TextContent(type="text", text=json.dumps(result, indent=2))]
-                
-                elif name == "generate_riddle":
-                    result = self.api.generate()
-                    if result["status"] == "success":
-                        result["grid"] = self.api.get_grid()
-                        result["placements"] = self.api.get_placements()
-                        self.bonus_system.update_available_letters(self.api.get_grid())
-                    return [TextContent(type="text", text=json.dumps(result, indent=2))]
-                
-                elif name == "get_problems":
-                    result = self.api.get_problems()
-                    return [TextContent(type="text", text=json.dumps(result, indent=2))]
-                
-                elif name == "set_bonus_word":
-                    bonus_word = arguments.get("bonus_word", "")
-                    self.bonus_system.set_bonus_word(bonus_word)
-                    result = {
-                        "status": "success",
-                        "message": f"Bonuswort '{bonus_word}' gesetzt",
-                        "bonus_info": self.bonus_system.get_bonus_letter_info()
-                    }
-                    return [TextContent(type="text", text=json.dumps(result, indent=2))]
-                
-                elif name == "reveal_bonus_letter":
-                    if not self.bonus_system.can_reveal_bonus_letter():
-                        result = {
-                            "status": "error",
-                            "message": "Keine weiteren Buchstaben verfügbar"
-                        }
-                    else:
-                        letter = self.bonus_system.reveal_next_letter()
-                        result = {
-                            "status": "success",
-                            "revealed_letter": letter,
-                            "hint": self.bonus_system.get_bonus_word_hint(),
-                            "bonus_info": self.bonus_system.get_bonus_letter_info()
-                        }
-                    return [TextContent(type="text", text=json.dumps(result, indent=2))]
-                
-                elif name == "get_status":
-                    result = {
-                        "status": "running",
-                        "framework_version": "1.0",
-                        "questions_count": len(self.api.riddle.questions),
-                        "placements_count": len(self.api.riddle.placements),
-                        "bonus_word_set": bool(self.bonus_system.bonus_word),
-                        "bonus_info": self.bonus_system.get_bonus_letter_info()
-                    }
-                    return [TextContent(type="text", text=json.dumps(result, indent=2))]
-                
-                elif name == "reset_framework":
-                    self.api = LLMKreuzwortAPI()
-                    self.bonus_system = BonusRevealSystem()
-                    result = {
-                        "status": "success",
-                        "message": "Framework erfolgreich zurückgesetzt"
-                    }
-                    return [TextContent(type="text", text=json.dumps(result, indent=2))]
-                
-                else:
-                    result = {
-                        "status": "error",
-                        "message": f"Unbekanntes Tool: {name}"
-                    }
-                    return [TextContent(type="text", text=json.dumps(result, indent=2))]
-            
+                result = self._dispatch(name, arguments)
+                return [TextContent(type="text", text=json.dumps(result, indent=2))]
             except Exception as e:
-                error_result = {
-                    "status": "error",
-                    "message": f"Tool-Fehler: {str(e)}"
-                }
-                return [TextContent(type="text", text=json.dumps(error_result, indent=2))]
+                return [TextContent(type="text", text=json.dumps({"status": "error", "message": f"Tool-Fehler: {str(e)}"}, indent=2))]
     
-    async def run(self, host: str = "localhost", port: int = 8000):
-        """Startet den MCP-Server"""
-        print(f"Kreuzwort-Riddle MCP-Server startet auf {host}:{port}")
+    def _dispatch(self, name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """Zentrale Tool-Dispatch-Methode."""
         
-        # Hier würde die eigentliche MCP-Server-Initialisierung erfolgen
-        # Dies ist eine vereinfachte Implementierung
-        import uvicorn
-        from fastapi import FastAPI
+        if name == "add_question":
+            return self.api.add_question(
+                arguments.get("question", ""),
+                arguments.get("answer", ""),
+                arguments.get("orientation", "horizontal")
+            )
         
-        app = FastAPI(title="Kreuzwort-Riddle MCP Server")
+        elif name == "validate_all":
+            return self.api.validate_all()
         
-        @app.post("/mcp/call")
-        async def mcp_call(request: Dict[str, Any]):
-            """MCP-kompatibler Endpoint"""
-            tool_name = request.get("tool")
-            arguments = request.get("arguments", {})
-            
-            # Verwende die bestehende Tool-Logik
-            results = await call_tool(tool_name, arguments)
-            return {"results": results}
+        elif name == "generate_riddle":
+            result = self.api.generate()
+            if result["status"] == "success":
+                result["grid"] = self.api.get_grid()
+                result["placements"] = self.api.get_placements()
+                self.bonus_system.update_available_letters(self.api.get_grid())
+            return result
         
-        await uvicorn.run(app, host=host, port=port)
+        elif name == "get_problems":
+            return self.api.get_problems()
+        
+        elif name == "set_bonus_word":
+            bonus_word = arguments.get("bonus_word", "")
+            self.bonus_system.set_bonus_word(bonus_word)
+            return {
+                "status": "success",
+                "message": f"Bonuswort '{bonus_word}' gesetzt",
+                "bonus_info": self.bonus_system.get_bonus_letter_info()
+            }
+        
+        elif name == "reveal_bonus_letter":
+            if not self.bonus_system.can_reveal_bonus_letter():
+                return {"status": "error", "message": "Keine weiteren Buchstaben verfügbar"}
+            letter = self.bonus_system.reveal_next_letter()
+            return {
+                "status": "success",
+                "revealed_letter": letter,
+                "hint": self.bonus_system.get_bonus_word_hint(),
+                "bonus_info": self.bonus_system.get_bonus_letter_info()
+            }
+        
+        elif name == "get_status":
+            return {
+                "status": "running",
+                "framework_version": "1.1",
+                "questions_count": len(self.api.riddle.questions),
+                "placements_count": len(self.api.riddle.placements),
+                "bonus_word_set": bool(self.bonus_system.bonus_word),
+                "bonus_info": self.bonus_system.get_bonus_letter_info()
+            }
+        
+        elif name == "reset_framework":
+            self.api = LLMKreuzwortAPI()
+            self.bonus_system = BonusRevealSystem()
+            return {"status": "success", "message": "Framework erfolgreich zurückgesetzt"}
+        
+        else:
+            return {"status": "error", "message": f"Unbekanntes Tool: {name}"}
+    
+    async def run_stdio(self):
+        """Startet den MCP-Server über stdio."""
+        if not HAS_MCP:
+            print("Fehler: 'mcp' Paket nicht installiert. pip install mcp", file=sys.stderr)
+            sys.exit(1)
+        
+        from mcp.server.stdio import stdio_server
+        
+        async with stdio_server() as (read_stream, write_stream):
+            await self.server.run(
+                read_stream,
+                write_stream,
+                InitializationOptions()
+            )
 
 
-# MCP-SERVER KONFIGURATION
 if __name__ == "__main__":
-    """
-    Startet den MCP-Server für das Framework.
-    """
     server = KreuzwortRiddleMCPServer()
-    
-    # Starte den Server
-    asyncio.run(server.run())
+    asyncio.run(server.run_stdio())

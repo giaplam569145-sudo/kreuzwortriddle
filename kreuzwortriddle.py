@@ -7,11 +7,10 @@ Für LLMs geschrieben - konzentriert sich auf Fragen/Antworten, nicht auf Logik
 Autor: Qwen Code (2025)
 """
 
-import json
 from typing import Dict, List, Tuple, Optional, Set, Any
 from dataclasses import dataclass, field
 from enum import Enum
-import random
+from itertools import permutations
 
 
 class Orientation(Enum):
@@ -61,21 +60,6 @@ class WordPlacement:
     x: int
     y: int
     length: int
-    
-    def overlaps_with(self, other: 'WordPlacement') -> bool:
-        """Prüft ob sich zwei Wörter überschneiden"""
-        if self.question.orientation == other.question.orientation:
-            return False
-            
-        # Prüfe ob sich die Wörter kreuzen
-        if self.question.orientation == Orientation.HORIZONTAL:
-            # Horizontales Wort kreuzt vertikales Wort
-            return (self.x <= other.x <= self.x + self.length - 1 and 
-                    other.y <= self.y <= other.y + other.length - 1)
-        else:
-            # Vertikales Wort kreuzt horizontales Wort
-            return (other.x <= self.x <= other.x + other.length - 1 and 
-                    self.y <= other.y <= self.y + other.length - 1)
 
 
 class KreuzwortRiddle:
@@ -113,106 +97,156 @@ class KreuzwortRiddle:
         return all_errors
         
     def generate_grid(self) -> bool:
-        """Versucht das Rätsel zu generieren - gibt True bei Erfolg zurück"""
+        """Versucht das Rätsel zu generieren — mit Backtracking und Permutationen"""
         if not self.questions:
             return False
-            
-        # Einfache Platzierungsstrategie
+
         self.placements.clear()
         self.grid = [['' for _ in range(self.width)] for _ in range(self.height)]
-        
-        # Platziere erste Frage in der Mitte
-        first_question = self.questions[0]
-        start_x = (self.width - len(first_question.answer)) // 2
+
+        if self._try_generate(list(self.questions)):
+            return True
+
+        if len(self.questions) <= 8:
+            for perm in permutations(self.questions[1:]):
+                ordered = [self.questions[0]] + list(perm)
+                self.placements.clear()
+                self.grid = [['' for _ in range(self.width)] for _ in range(self.height)]
+                if self._try_generate(ordered):
+                    return True
+
+        return False
+
+    def _try_generate(self, questions: List[Question]) -> bool:
+        """Backtracking-Platzierung einer geordneten Fragenliste"""
+        if not questions:
+            return True
+
+        first = questions[0]
+        start_x = max(0, (self.width - len(first.answer)) // 2)
         start_y = self.height // 2
-        
+
+        if not self._place_word(first, start_x, start_y):
+            return False
+
+        return self._place_remaining(questions[1:], 0)
+
+    def _place_remaining(self, remaining: List[Question], idx: int) -> bool:
+        """Platziert die restlichen Wörter per Backtracking"""
+        if idx >= len(remaining):
+            return True
+
+        question = remaining[idx]
+
+        for existing in list(self.placements):
+            pos = self._find_placement(question, existing)
+            if pos is not None:
+                px, py = pos
+                saved_grid = [row[:] for row in self.grid]
+                saved_placements = list(self.placements)
+
+                self._place_word(question, px, py)
+
+                if self._place_remaining(remaining, idx + 1):
+                    return True
+
+                self.grid = saved_grid
+                self.placements = saved_placements
+
+        return False
+
+    def _find_placement(self, question: Question,
+                        existing: WordPlacement) -> Optional[Tuple[int, int]]:
+        """Sucht eine gültige Position für question an existing, gibt (x,y) oder None"""
+        answer = question.answer.upper()
+        existing_answer = existing.question.answer.upper()
+        existing_horiz = existing.question.orientation == Orientation.HORIZONTAL
+
+        for i, char in enumerate(answer):
+            for j, ex_char in enumerate(existing_answer):
+                if char == ex_char:
+                    if existing_horiz:
+                        cross_x = existing.x + j
+                        cross_y = existing.y
+                    else:
+                        cross_x = existing.x
+                        cross_y = existing.y + j
+
+                    if question.orientation == Orientation.HORIZONTAL:
+                        nx = cross_x - i
+                        ny = cross_y
+                    else:
+                        nx = cross_x
+                        ny = cross_y - i
+
+                    if self._can_place_at(question, nx, ny):
+                        return (nx, ny)
+        return None
+
+    def _place_word(self, question: Question, x: int, y: int) -> bool:
+        """Platziert ein Wort im Gitter an (x,y). Keine Prüfungen — nur Schreiben."""
+        answer = question.answer.upper()
         placement = WordPlacement(
-            question=first_question,
-            x=start_x,
-            y=start_y,
-            length=len(first_question.answer)
+            question=question, x=x, y=y, length=len(answer)
         )
         self.placements.append(placement)
-        
-        # Platziere Wort im Gitter
-        for i, char in enumerate(first_question.answer):
-            self.grid[start_y][start_x + i] = char.upper()
-        
-        # Versuche andere Wörter zu platzieren
-        for question in self.questions[1:]:
-            placed = False
-            for existing_placement in self.placements:
-                if self._try_place_word(question, existing_placement):
-                    placed = True
-                    break
-            if not placed:
-                return False
-                
+
+        for k, ch in enumerate(answer):
+            if question.orientation == Orientation.HORIZONTAL:
+                self.grid[y][x + k] = ch
+            else:
+                self.grid[y + k][x] = ch
         return True
-        
-    def _try_place_word(self, question: Question, existing_placement: WordPlacement) -> bool:
-        """Versucht ein Wort an bestehendes Wort anzuschließen"""
-        answer = question.answer.upper()
-        existing_answer = existing_placement.question.answer.upper()
-        
-        # Finde gemeinsame Buchstaben
-        for i, char in enumerate(answer):
-            for j, existing_char in enumerate(existing_answer):
-                if char == existing_char:
-                    # Berechne mögliche Position
-                    if question.orientation == Orientation.HORIZONTAL:
-                        # Horizontales Wort
-                        new_x = existing_placement.x + j - i
-                        new_y = existing_placement.y
-                    else:
-                        # Vertikales Wort
-                        new_x = existing_placement.x
-                        new_y = existing_placement.y + j - i
-                    
-                    # Prüfe ob Position gültig ist
-                    if self._can_place_at(question, new_x, new_y):
-                        # Platziere das Wort
-                        placement = WordPlacement(
-                            question=question,
-                            x=new_x,
-                            y=new_y,
-                            length=len(answer)
-                        )
-                        self.placements.append(placement)
-                        
-                        # Aktualisiere Gitter
-                        for k, char in enumerate(answer):
-                            if question.orientation == Orientation.HORIZONTAL:
-                                self.grid[new_y][new_x + k] = char
-                            else:
-                                self.grid[new_y + k][new_x] = char
-                        
-                        return True
-        
-        return False
-        
+
     def _can_place_at(self, question: Question, x: int, y: int) -> bool:
-        """Prüft ob ein Wort an der angegebenen Position platziert werden kann"""
+        """Prüft ob ein Wort an (x,y) platziert werden kann — inkl. Parallelprüfung"""
         answer = question.answer.upper()
-        
-        # Prüfe Gittergrenzen
-        if question.orientation == Orientation.HORIZONTAL:
+        is_horiz = question.orientation == Orientation.HORIZONTAL
+
+        if is_horiz:
             if x < 0 or x + len(answer) > self.width or y < 0 or y >= self.height:
                 return False
         else:
             if x < 0 or x >= self.width or y < 0 or y + len(answer) > self.height:
                 return False
-        
-        # Prüfe Konflikte
-        for i, char in enumerate(answer):
-            if question.orientation == Orientation.HORIZONTAL:
-                grid_char = self.grid[y][x + i]
-            else:
-                grid_char = self.grid[y + i][x]
-                
-            if grid_char and grid_char != char:
+
+        before_x, before_y = (x - 1, y) if is_horiz else (x, y - 1)
+        if 0 <= before_x < self.width and 0 <= before_y < self.height:
+            if self.grid[before_y][before_x]:
                 return False
-        
+
+        after_x, after_y = (x + len(answer), y) if is_horiz else (x, y + len(answer))
+        if 0 <= after_x < self.width and 0 <= after_y < self.height:
+            if self.grid[after_y][after_x]:
+                return False
+
+        has_crossing = False
+        for i, char in enumerate(answer):
+            if is_horiz:
+                gx, gy = x + i, y
+            else:
+                gx, gy = x, y + i
+
+            grid_char = self.grid[gy][gx]
+            if grid_char:
+                if grid_char != char:
+                    return False
+                has_crossing = True
+            else:
+                if is_horiz:
+                    for dy in (-1, 1):
+                        ny = gy + dy
+                        if 0 <= ny < self.height and self.grid[ny][gx]:
+                            return False
+                else:
+                    for dx in (-1, 1):
+                        nx = gx + dx
+                        if 0 <= nx < self.width and self.grid[gy][nx]:
+                            return False
+
+        if self.placements and not has_crossing:
+            return False
+
         return True
         
     def get_problematic_questions(self) -> List[Tuple[int, str]]:
@@ -348,11 +382,10 @@ class BonusRevealSystem:
         self.revealed_positions: List[Tuple[int, int]] = []
         self.bonus_word: str = ""
         self.revealed_letters: List[str] = []
+        self._grid_positions: Dict[str, List[Tuple[int, int]]] = {}
         
     def get_bonus_letter_info(self) -> Dict[str, Any]:
-        """
-        Gibt dem LLM Informationen über verfügbare Buchstaben für das Bonuswort.
-        """
+        """Gibt dem LLM Informationen über verfügbare Buchstaben für das Bonuswort."""
         return {
             "available_letters": list(self.available_letters),
             "revealed_positions": self.revealed_positions,
@@ -361,30 +394,27 @@ class BonusRevealSystem:
         }
         
     def update_available_letters(self, grid: List[List[str]]) -> None:
-        """
-        Aktualisiert die verfügbaren Buchstaben basierend auf dem aktuellen Gitterzustand.
-        """
+        """Aktualisiert die verfügbaren Buchstaben basierend auf dem aktuellen Gitterzustand."""
         self.available_letters.clear()
+        self._grid_positions.clear()
         
         for y, row in enumerate(grid):
             for x, cell in enumerate(row):
                 if cell and (x, y) not in self.revealed_positions:
                     self.available_letters.add(cell)
+                    self._grid_positions.setdefault(cell, []).append((x, y))
         
     def can_reveal_bonus_letter(self) -> bool:
-        """
-        Prüft ob ein neuer Buchstabe des Bonuswortes aufgedeckt werden kann.
-        """
-        return len(self.available_letters) > 0 and len(self.revealed_letters) < len(self.bonus_word)
+        """Prüft ob ein neuer Buchstabe des Bonuswortes aufgedeckt werden kann."""
+        if not self.available_letters or not self.bonus_word:
+            return False
+        return '_' in self.revealed_letters
         
     def reveal_next_letter(self) -> Optional[str]:
-        """
-        Deckt den nächsten Buchstaben des Bonuswortes auf.
-        """
+        """Deckt den nächsten Buchstaben des Bonuswortes auf."""
         if not self.can_reveal_bonus_letter():
             return None
             
-        # Finde den nächsten Buchstaben im Bonuswort
         for i, letter in enumerate(self.bonus_word):
             if i >= len(self.revealed_letters) or self.revealed_letters[i] == '_':
                 if letter in self.available_letters:
@@ -392,26 +422,75 @@ class BonusRevealSystem:
                         self.revealed_letters[i] = letter
                     else:
                         self.revealed_letters.append(letter)
+                    pos = self._grid_positions.get(letter, [None])[0]
+                    if pos:
+                        self.revealed_positions.append(pos)
+                        self.available_letters.discard(letter)
                     return letter
         
         return None
         
     def set_bonus_word(self, word: str) -> None:
-        """
-        Setzt das Bonuswort.
-        """
+        """Setzt das Bonuswort."""
         self.bonus_word = word.upper()
         self.revealed_letters = ['_'] * len(word)
+        self.revealed_positions.clear()
         
     def get_bonus_word_hint(self) -> str:
-        """
-        Gibt dem LLM einen Hinweis für das Bonuswort.
-        """
+        """Gibt dem LLM einen Hinweis für das Bonuswort."""
         if not self.bonus_word:
             return "Kein Bonuswort gesetzt"
             
         revealed = ''.join(self.revealed_letters)
         return f"Bonuswort: {revealed} ({len(self.revealed_letters)}/{len(self.bonus_word)} Buchstaben)"
+
+
+class BonusWordConstraints:
+    """Definiert die Einschränkungen für das Bonuswort."""
+    
+    def __init__(self):
+        self.max_letters_per_word: int = 1
+        self.max_bonus_length: int = 8
+        self.min_bonus_length: int = 3
+    
+    def get_constraints_info(self) -> Dict[str, Any]:
+        """Gibt Informationen über die Einschränkungen."""
+        return {
+            "max_letters_per_word": self.max_letters_per_word,
+            "max_bonus_length": self.max_bonus_length,
+            "min_bonus_length": self.min_bonus_length,
+            "description": "Maximal ein Buchstabe pro Wort für das Bonuswort"
+        }
+    
+    def calculate_max_bonus_length(self, num_questions: int) -> int:
+        """Berechnet die maximale Länge des Bonuswortes basierend auf der Anzahl der Fragen."""
+        calculated = min(num_questions * self.max_letters_per_word, self.max_bonus_length)
+        return max(calculated, self.min_bonus_length)
+    
+    def validate_bonus_word(self, bonus_word: str, available_letters: Set[str]) -> List[str]:
+        """Validiert ein Bonuswort gegen die verfügbaren Buchstaben."""
+        errors = []
+        
+        if not bonus_word.strip():
+            errors.append("Bonuswort ist leer")
+            return errors
+        
+        if len(bonus_word) < self.min_bonus_length:
+            errors.append(f"Bonuswort ist zu kurz (mindestens {self.min_bonus_length} Buchstaben)")
+        
+        if len(bonus_word) > self.max_bonus_length:
+            errors.append(f"Bonuswort ist zu lang (maximal {self.max_bonus_length} Buchstaben)")
+        
+        if not bonus_word.isalpha():
+            errors.append("Bonuswort darf nur Buchstaben enthalten")
+        
+        word_letters = set(bonus_word.upper())
+        missing_letters = word_letters - available_letters
+        
+        if missing_letters:
+            errors.append(f"Fehlende Buchstaben im Gitter: {', '.join(missing_letters)}")
+        
+        return errors
 
 
 # BEISPIEL-NUTZUNG FÜR LLMs

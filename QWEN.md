@@ -9,8 +9,15 @@ Framework zur Erstellung von Kreuzworträtseln für LLMs
 - Automatische Validierung und Fehlerbehebungs-Feedback
 
 ## Setup Status
-- ✅ Git Repository initialisiert
--  🚧 Framework Entwicklung beginnt
+- Git Repository initialisiert
+- Core-Library funktional (Backtracking-Algorithmus, Parallel-Berührungsprüfung)
+- BonusRevealSystem integriert (revealed_positions wird befüllt)
+- BonusWordConstraints in Core-Library migriert
+- Tests mit Assertions
+- REST-API funktional
+- MCP-Server stdio-basiert
+- `llm_bonus_info.py` entfernt (nach `kreuzwortriddle.py` migriert)
+- Siehe `PROJEKTANALYSE.md` für Details
 
 ## Framework-Anforderungen
 Das Framework muss folgenden Anforderungen genügen:

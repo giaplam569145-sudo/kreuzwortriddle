@@ -7,7 +7,7 @@ Demonstriert wie ein zusätzliches Wort sich aus den Kreuzungspunkten der andere
 Autor: Qwen Code (2025)
 """
 
-from kreuzwortriddle import LLMKreuzwortAPI, BonusRevealSystem
+from kreuzwortriddle import LLMKreuzwortAPI, BonusRevealSystem, BonusWordConstraints
 
 def demonstrate_bonus_feature():
     """
@@ -37,10 +37,10 @@ def demonstrate_bonus_feature():
     )
     print(f"Frage 2: {result2}")
     
-    # Frage 3: Horizontal  
+    # Frage 3: Horizontal
     result3 = api.add_question(
-        "Hauptstadt von Italien",
-        "Rom",
+        "Stadt in Tirol",
+        "Innsbruck",
         "horizontal"
     )
     print(f"Frage 3: {result3}")
@@ -73,9 +73,7 @@ def demonstrate_bonus_feature():
         # Das Bonuswort ergibt sich aus den Kreuzungspunkten der anderen Wörter
         print("\n=== BONUSWORT-LOGIK ===\n")
         print("Das Bonuswort 'EUROPA' wird Buchstabe für Buchstabe aufgedeckt:")
-        print("- B von Berlin (Position 1,1)")
-        print("- E von Paris (Position 2,1)")
-        print("- U von Rom (Position 3,1)")
+        print("- Die Buchstaben stammen aus den Kreuzungspunkten der Wörter")
         
         # LLM-spezifische Hinweise für Bonuswort
         print("\n=== LLM-HINWEISE FÜR BONUSWORT ===\n")
@@ -123,10 +121,7 @@ def demonstrate_bonus_feature():
 
 
 def demonstrate_bonus_word_constraints():
-    """
-    Demonstriert die Einschränkungen für Bonuswörter
-    """
-    from llm_bonus_info import BonusWordConstraints, get_bonus_word_guidelines
+    """Demonstriert die Einschränkungen für Bonuswörter"""
     
     print("=== BONUSWORT-EINSCHRÄNKUNGEN ===\n")
     
@@ -146,9 +141,8 @@ def demonstrate_bonus_word_constraints():
     
     # Zeige Richtlinien
     print("\nLLM-Richtlinien:")
-    guidelines = get_bonus_word_guidelines()
-    print(f"- Zweck: {guidelines['purpose']}")
-    print(f"- Mechanismus: {guidelines['mechanism']['progressive_reveal']}")
+    print("- Zweck: Das Bonuswort ergibt sich aus den Kreuzungspunkten der anderen Wörter")
+    print("- Mechanismus: Progressiver Enthüllungsmechanismus")
     
     print("\n=== EINSCHRÄNKUNGS-DEMO ABGESCHLOSSEN ===\n")
 

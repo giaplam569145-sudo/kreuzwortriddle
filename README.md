@@ -175,7 +175,7 @@ Verfügbare Tools:
 
 ### Rätselgenerierung
 
-- Mindestens 2 Fragen erforderlich
+- Mindestens 1 Frage erforderlich (aber 1+ empfohlen für echte Kreuzung)
 - Fragen müssen sich kreuzen können (gemeinsame Buchstaben)
 - Gittergrenzen müssen eingehalten werden
 

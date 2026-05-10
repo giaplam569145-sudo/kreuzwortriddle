@@ -224,6 +224,9 @@ def reset_framework():
     Setzt das Framework zurück
     
     Endpoint: POST /api/reset
+    
+    Hinweis: Verwendet `global` — nicht thread-safe.
+    Für Produktion eine pro-Session-Instanz oder eine WSGI-Lösung verwenden.
     """
     try:
         global api, bonus_system
