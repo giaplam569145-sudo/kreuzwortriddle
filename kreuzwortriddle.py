@@ -133,25 +133,28 @@ class KreuzwortRiddle:
             return True
 
         first = questions[0]
-        start_x = max(0, (self.width - len(first.answer)) // 2)
-        start_y = self.height // 2
+        if first.orientation == Orientation.HORIZONTAL:
+            start_x = max(0, (self.width - len(first.answer)) // 2)
+            start_y = self.height // 2
+        else:
+            start_x = self.width // 2
+            start_y = max(0, (self.height - len(first.answer)) // 2)
 
-        if not self._place_word(first, start_x, start_y):
+        if not self._can_place_at(first, start_x, start_y):
             return False
 
+        self._place_word(first, start_x, start_y)
         return self._place_remaining(questions[1:], 0)
 
     def _place_remaining(self, remaining: List[Question], idx: int) -> bool:
-        """Platziert die restlichen Wörter per Backtracking"""
+        """Platziert die restlichen Wörter per Backtracking — probiert ALLE Kreuzungspositionen."""
         if idx >= len(remaining):
             return True
 
         question = remaining[idx]
 
         for existing in list(self.placements):
-            pos = self._find_placement(question, existing)
-            if pos is not None:
-                px, py = pos
+            for px, py in self._find_all_placements(question, existing):
                 saved_grid = [row[:] for row in self.grid]
                 saved_placements = list(self.placements)
 
@@ -165,33 +168,33 @@ class KreuzwortRiddle:
 
         return False
 
-    def _find_placement(self, question: Question,
-                        existing: WordPlacement) -> Optional[Tuple[int, int]]:
-        """Sucht eine gültige Position für question an existing, gibt (x,y) oder None"""
+    def _find_all_placements(self, question: Question,
+                             existing: WordPlacement) -> List[Tuple[int, int]]:
+        """Findet ALLE gültigen Kreuzungspositionen für question an existing."""
         answer = question.answer.upper()
         existing_answer = existing.question.answer.upper()
         existing_horiz = existing.question.orientation == Orientation.HORIZONTAL
 
+        candidates: Set[Tuple[int, int]] = set()
         for i, char in enumerate(answer):
             for j, ex_char in enumerate(existing_answer):
                 if char == ex_char:
                     if existing_horiz:
-                        cross_x = existing.x + j
-                        cross_y = existing.y
+                        cross_x, cross_y = existing.x + j, existing.y
                     else:
-                        cross_x = existing.x
-                        cross_y = existing.y + j
+                        cross_x, cross_y = existing.x, existing.y + j
 
                     if question.orientation == Orientation.HORIZONTAL:
-                        nx = cross_x - i
-                        ny = cross_y
+                        nx, ny = cross_x - i, cross_y
                     else:
-                        nx = cross_x
-                        ny = cross_y - i
+                        nx, ny = cross_x, cross_y - i
 
-                    if self._can_place_at(question, nx, ny):
-                        return (nx, ny)
-        return None
+                    candidates.add((nx, ny))
+
+        cx, cy = self.width // 2, self.height // 2
+        result = [(x, y) for x, y in candidates if self._can_place_at(question, x, y)]
+        result.sort(key=lambda p: abs(p[0] - cx) + abs(p[1] - cy))
+        return result
 
     def _place_word(self, question: Question, x: int, y: int) -> bool:
         """Platziert ein Wort im Gitter an (x,y). Keine Prüfungen — nur Schreiben."""
