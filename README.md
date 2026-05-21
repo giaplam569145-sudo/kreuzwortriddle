@@ -225,8 +225,8 @@ validation = api.validate_all()
 if validation["status"] == "valid":
     generation = api.generate()
     if generation["status"] == "success":
-        # Bonuswort-System
-        bonus_system.set_bonus_word("DEUTSCH")
+        # Bonuswort-System (Buchstaben muessen im Gitter vorkommen)
+        bonus_system.set_bonus_word("EBENE")
         bonus_system.update_available_letters(api.get_grid())
         
         # Gitter anzeigen

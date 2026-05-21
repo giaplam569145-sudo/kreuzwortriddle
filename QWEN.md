@@ -1,27 +1,18 @@
 # QWEN Framework Dokumentation - Kreuzwort-Riddle Framework
 
-## Projektübersicht
-Framework zur Erstellung von Kreuzworträtseln für LLMs
+## Projektuebersicht
+Framework zur Erstellung von Kreuzwortraetseln fuer LLMs.
 
 ## LLM-spezifische Hinweise
-- Framework automatisiert die Rätselerstellung
-- LLM kümmert sich nur um Fragen/Antworten und deren Validierung
+- Framework automatisiert die Raetselerstellung
+- LLM kuemmert sich nur um Fragen/Antworten und deren Validierung
 - Automatische Validierung und Fehlerbehebungs-Feedback
 
-## Setup Status
-- Git Repository initialisiert
-- Core-Library funktional (Backtracking-Algorithmus, Parallel-Berührungsprüfung)
-- BonusRevealSystem integriert (revealed_positions wird befüllt)
-- BonusWordConstraints in Core-Library migriert
-- Tests mit Assertions
-- REST-API funktional
-- MCP-Server stdio-basiert
-- `llm_bonus_info.py` entfernt (nach `kreuzwortriddle.py` migriert)
-- Siehe `PROJEKTANALYSE.md` für Details
-
-## Framework-Anforderungen
-Das Framework muss folgenden Anforderungen genügen:
-1. **LLM-freundliche API**: Einfache Eingabe von Fragen und Antworten
-2. **Automatische Validierung**: Prüfung auf widersprüchliche Kreuzungen
-3. **Intelligentes Fehler-Feedback**: Präzise Hinweise für Korrekturen
-4. **Resilienz bei unmöglichen Rätseln**: Identifikation "fauler" Fragen
+## Setup Status (18. Mai 2026)
+- Core-Library: Backtracking-Algorithmus mit Permutations-Fallback
+- BonusRevealSystem: Counter-basiert (Duplikat-Buchstaben werden korrekt aufgedeckt)
+- BonusWordConstraints in Core-Library integriert
+- Tests: 32 Pytest-Tests, alle gruen
+- REST-API: 8 Endpoints, CORS-unterstuetzung (optional via flask_cors)
+- MCP-Server: stdio-basiert, 8 Tools, MCP SDK 1.x
+- Dokumentation: CODE_REVIEW.md, review_demo.py

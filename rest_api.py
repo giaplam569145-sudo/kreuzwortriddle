@@ -8,30 +8,40 @@ Thread-sicher durch Session-basierte Instanzen.
 Autor: Qwen Code (2025)
 """
 
-from typing import Any, Dict
+import os
+from typing import cast
 
 from flask import Flask, jsonify, request, session
 
 from kreuzwortriddle import BonusRevealSystem, LLMKreuzwortAPI
 
 app = Flask(__name__)
-app.secret_key = "kreuzwort-riddle-dev-key"
+app.secret_key = os.environ.get(
+    "KREUZWORT_SECRET_KEY", "kreuzwort-riddle-dev-key"
+)
+
+try:
+    from flask_cors import CORS
+    CORS(app)
+except ImportError:
+    pass
 
 
-def _get_session() -> Dict[str, Any]:
-    """Holt oder erstellt die Framework-Instanz fuer die aktuelle Session."""
+def _ensure_session() -> None:
+    """Stellt sicher, dass die Framework-Instanzen in der Session existieren."""
     if "api" not in session:
         session["api"] = LLMKreuzwortAPI()
         session["bonus_system"] = BonusRevealSystem()
-    return session
 
 
 def _api() -> LLMKreuzwortAPI:
-    return _get_session()["api"]
+    _ensure_session()
+    return cast(LLMKreuzwortAPI, session["api"])
 
 
 def _bonus() -> BonusRevealSystem:
-    return _get_session()["bonus_system"]
+    _ensure_session()
+    return cast(BonusRevealSystem, session["bonus_system"])
 
 
 @app.route('/api/questions', methods=['POST'])
@@ -177,4 +187,7 @@ def internal_error(error):
 
 
 if __name__ == '__main__':
+    if app.secret_key == "kreuzwort-riddle-dev-key":
+        print("Warnung: Verwende den Standard-Secret-Key. "
+              "Setze KREUZWORT_SECRET_KEY fuer Produktion.", file=__import__('sys').stderr)
     app.run(debug=True, host='0.0.0.0', port=5000)
