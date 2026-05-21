@@ -7,6 +7,7 @@ Für LLMs geschrieben - konzentriert sich auf Fragen/Antworten, nicht auf Logik
 Autor: Qwen Code (2025)
 """
 
+from collections import Counter
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Dict, List, Optional, Set, Tuple
@@ -389,11 +390,21 @@ class BonusRevealSystem:
     """
 
     def __init__(self):
-        self.available_letters: Set[str] = set()
+        self._letter_counts: Counter[str] = Counter()
         self.revealed_positions: List[Tuple[int, int]] = []
         self.bonus_word: str = ""
         self.revealed_letters: List[str] = []
         self._grid_positions: Dict[str, List[Tuple[int, int]]] = {}
+
+    @property
+    def available_letters(self) -> Set[str]:
+        """Menge der noch verfügbaren Buchstaben (jeder Buchstabe max. einmal)."""
+        return set(self._letter_counts.elements())
+
+    @available_letters.setter
+    def available_letters(self, letters: Set[str]) -> None:
+        """Setter für Abwärtskompatibilität (jeder Buchstabe mit Count 1)."""
+        self._letter_counts = Counter(letters)
 
     def get_bonus_letter_info(self) -> Dict[str, Any]:
         """Gibt dem LLM Informationen über verfügbare Buchstaben für das Bonuswort."""
@@ -405,38 +416,60 @@ class BonusRevealSystem:
         }
 
     def update_available_letters(self, grid: List[List[str]]) -> None:
-        """Aktualisiert die verfügbaren Buchstaben basierend auf dem aktuellen Gitterzustand."""
-        self.available_letters.clear()
+        """Aktualisiert die verfügbaren Buchstaben basierend auf dem aktuellen Gitterzustand.
+
+        Zählt jeden Buchstaben mit seiner tatsächlichen Häufigkeit im Gitter,
+        sodass auch mehrfach vorkommende Buchstaben korrekt aufgedeckt werden können.
+        """
+        self._letter_counts.clear()
         self._grid_positions.clear()
 
         for y, row in enumerate(grid):
             for x, cell in enumerate(row):
                 if cell and (x, y) not in self.revealed_positions:
-                    self.available_letters.add(cell)
+                    self._letter_counts[cell] += 1
                     self._grid_positions.setdefault(cell, []).append((x, y))
 
     def can_reveal_bonus_letter(self) -> bool:
         """Prüft ob ein neuer Buchstabe des Bonuswortes aufgedeckt werden kann."""
-        if not self.available_letters or not self.bonus_word:
+        if not self.bonus_word:
             return False
-        return '_' in self.revealed_letters
+        if '_' not in self.revealed_letters:
+            return False
+        for i, letter in enumerate(self.bonus_word):
+            if i >= len(self.revealed_letters) or self.revealed_letters[i] == '_':
+                if self._letter_counts.get(letter, 0) > 0:
+                    return True
+        return False
 
     def reveal_next_letter(self) -> Optional[str]:
-        """Deckt den nächsten Buchstaben des Bonuswortes auf."""
+        """Deckt den nächsten Buchstaben des Bonuswortes auf.
+
+        Verbraucht einen Buchstaben aus dem Counter und die erste dazugehörige
+        Gitterposition — dadurch werden auch Duplikat-Buchstaben korrekt abgebildet.
+        """
         if not self.can_reveal_bonus_letter():
             return None
 
         for i, letter in enumerate(self.bonus_word):
             if i >= len(self.revealed_letters) or self.revealed_letters[i] == '_':
-                if letter in self.available_letters:
+                count = self._letter_counts.get(letter, 0)
+                if count > 0:
+                    if count == 1:
+                        del self._letter_counts[letter]
+                    else:
+                        self._letter_counts[letter] = count - 1
+
                     if i < len(self.revealed_letters):
                         self.revealed_letters[i] = letter
                     else:
                         self.revealed_letters.append(letter)
-                    pos = self._grid_positions.get(letter, [None])[0]
-                    if pos:
+
+                    positions = self._grid_positions.get(letter)
+                    if positions:
+                        pos = positions.pop(0)
                         self.revealed_positions.append(pos)
-                        self.available_letters.discard(letter)
+
                     return letter
 
         return None

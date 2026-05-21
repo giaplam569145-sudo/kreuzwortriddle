@@ -16,7 +16,6 @@ from kreuzwortriddle import BonusRevealSystem, LLMKreuzwortAPI
 
 try:
     from mcp.server import Server
-    from mcp.server.models import InitializationOptions
     from mcp.types import TextContent, Tool
     HAS_MCP = True
 except ImportError:
@@ -30,7 +29,7 @@ class KreuzwortRiddleMCPServer:
         self.api = LLMKreuzwortAPI()
         self.bonus_system = BonusRevealSystem()
         if HAS_MCP:
-            self.server = Server("kreuzwort-riddle-framework")
+            self.server = Server("kreuzwort-riddle-framework", version="1.1")
             self._register_tools()
 
     def _register_tools(self):
@@ -77,8 +76,7 @@ class KreuzwortRiddleMCPServer:
                     inputSchema={
                         "type": "object",
                         "properties": {
-                            "bonus_word": {"type": "string", "description": "Das Bonuswort"},
-                            "description": {"type": "string", "description": "Beschreibung des Bonuswortes"}
+                            "bonus_word": {"type": "string", "description": "Das Bonuswort"}
                         },
                         "required": ["bonus_word"]
                     }
@@ -113,17 +111,17 @@ class KreuzwortRiddleMCPServer:
         """Zentrale Tool-Dispatch-Methode."""
 
         if name == "add_question":
-            return self.api.add_question(
+            return dict(self.api.add_question(
                 arguments.get("question", ""),
                 arguments.get("answer", ""),
                 arguments.get("orientation", "horizontal")
-            )
+            ))
 
         elif name == "validate_all":
-            return self.api.validate_all()
+            return dict(self.api.validate_all())
 
         elif name == "generate_riddle":
-            result = self.api.generate()
+            result = dict(self.api.generate())
             if result["status"] == "success":
                 result["grid"] = self.api.get_grid()
                 result["placements"] = self.api.get_placements()
@@ -131,7 +129,7 @@ class KreuzwortRiddleMCPServer:
             return result
 
         elif name == "get_problems":
-            return self.api.get_problems()
+            return dict(self.api.get_problems())
 
         elif name == "set_bonus_word":
             bonus_word = arguments.get("bonus_word", "")
@@ -183,7 +181,7 @@ class KreuzwortRiddleMCPServer:
             await self.server.run(
                 read_stream,
                 write_stream,
-                InitializationOptions()
+                self.server.create_initialization_options()
             )
 
 
