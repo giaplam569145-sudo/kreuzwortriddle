@@ -262,22 +262,77 @@ class KreuzwortRiddle:
 
         return True
 
+    def _could_cross_pair(self, a: Question, b: Question) -> bool:
+        """Prüft ob zwei Wörter im Gitter geometrisch kreuzen könnten (Bounds + Orientierung)."""
+        if a.orientation == b.orientation:
+            return False
+
+        horiz = a if a.orientation == Orientation.HORIZONTAL else b
+        vert = b if a.orientation == Orientation.HORIZONTAL else a
+
+        h_word, h_len = horiz.answer.upper(), len(horiz.answer)
+        v_word, v_len = vert.answer.upper(), len(vert.answer)
+
+        for i, h_char in enumerate(h_word):
+            for j, v_char in enumerate(v_word):
+                if h_char != v_char:
+                    continue
+
+                x_min = max(0, -i)
+                x_max = min(self.width - h_len, self.width - 1 - i)
+                y_min = max(0, j)
+                y_max = min(self.height - 1, self.height - v_len + j)
+
+                if x_min <= x_max and y_min <= y_max:
+                    return True
+
+        return False
+
     def get_problematic_questions(self) -> List[Tuple[int, str]]:
-        """Identifiziert Fragen, die eine Rätselerstellung verhindern"""
+        """Identifiziert Fragen, die eine Rätselerstellung verhindern.
+
+        Prüft Buchstaben-Überschneidungen UND geometrische Machbarkeit
+        innerhalb der Gittergrenzen (Länge, Orientierung, Kreuzungsposition).
+        """
         problems = []
 
         for i, question in enumerate(self.questions, 1):
-            has_overlap = False
-            for j, other_question in enumerate(self.questions, 1):
-                if i != j:
-                    # Prüfe ob die Antworten gemeinsame Buchstaben haben
-                    if set(question.answer.upper()) & set(other_question.answer.upper()):
-                        has_overlap = True
-                        break
+            answer = question.answer
 
-            if not has_overlap:
-                msg = (f"Antwort '{question.answer}' hat keine gemeinsamen"
-                        " Buchstaben mit anderen Antworten")
+            max_len = (self.width if question.orientation == Orientation.HORIZONTAL
+                       else self.height)
+            if len(answer) > max_len:
+                problems.append((
+                    i,
+                    f"Antwort '{answer}' ist zu lang für das Gitter "
+                    f"({max_len} Zellen in {question.orientation.value}er Richtung)"
+                ))
+                continue
+
+            can_cross = False
+            for j, other in enumerate(self.questions, 1):
+                if i == j:
+                    continue
+                if not (set(answer.upper()) & set(other.answer.upper())):
+                    continue
+                if question.orientation == other.orientation:
+                    continue
+                if self._could_cross_pair(question, other):
+                    can_cross = True
+                    break
+
+            if not can_cross:
+                has_letter_overlap = any(
+                    set(answer.upper()) & set(q.answer.upper())
+                    for j, q in enumerate(self.questions, 1) if j != i
+                )
+
+                if has_letter_overlap:
+                    msg = (f"Antwort '{answer}' hat gemeinsame Buchstaben, "
+                           "aber die Positionen erlauben keine Kreuzung im Gitter")
+                else:
+                    msg = f"Antwort '{answer}' hat keine gemeinsamen Buchstaben mit anderen Antworten"
+
                 problems.append((i, msg))
 
         return problems
@@ -415,7 +470,8 @@ class BonusRevealSystem:
             "available_letters": list(self.available_letters),
             "revealed_positions": self.revealed_positions,
             "bonus_word_length": len(self.bonus_word) if self.bonus_word else 0,
-            "revealed_letters": self.revealed_letters
+            "revealed_letters": self.revealed_letters,
+            "is_complete": self.is_complete
         }
 
     def update_available_letters(self, grid: List[List[str]]) -> None:
@@ -489,7 +545,15 @@ class BonusRevealSystem:
             return "Kein Bonuswort gesetzt"
 
         revealed = ''.join(self.revealed_letters)
-        return f"Bonuswort: {revealed} ({len(self.revealed_letters)}/{len(self.bonus_word)} Buchstaben)"
+        status = "VOLLSTAENDIG" if self.is_complete else "in Arbeit"
+        return f"Bonuswort: {revealed} ({len(self.revealed_letters)}/{len(self.bonus_word)} Buchstaben, {status})"
+
+    @property
+    def is_complete(self) -> bool:
+        """Ob das Bonuswort vollständig aufgedeckt wurde."""
+        if not self.bonus_word:
+            return False
+        return '_' not in self.revealed_letters
 
 
 class BonusWordConstraints:

@@ -141,6 +141,24 @@ class TestGitterGenerierung:
         assert len(horiz) >= 1
         assert len(vert) >= 1
 
+    def test_fuenf_woerter(self):
+        a = LLMKreuzwortAPI()
+        for q, a_, o in [
+            ("F1", "ABCDE", "horizontal"),
+            ("F2", "BCDEF", "vertical"),
+            ("F3", "CDEFG", "horizontal"),
+            ("F4", "DEFGH", "vertical"),
+            ("F5", "EFGHI", "horizontal"),
+        ]:
+            a.add_question(q, a_, o)
+        assert a.generate()["status"] == "success"
+
+    def test_vertikales_erstes_wort(self):
+        a = LLMKreuzwortAPI()
+        a.add_question("F1", "BERLIN", "vertical")
+        a.add_question("F2", "ELBE", "horizontal")
+        assert a.generate()["status"] == "success"
+
 
 # ── Problematische Fragen ────────────────────────────────────────────
 
@@ -151,6 +169,31 @@ class TestProbleme:
         a.add_question("Frage2", "Wado", "vertical")
         problems = a.get_problems()
         assert problems["status"] == "problems_found"
+
+    def test_geometrisches_problem(self):
+        a = LLMKreuzwortAPI(width=5, height=5)
+        a.add_question("F1", "ABCDE", "horizontal")
+        a.add_question("F2", "BCD", "vertical")
+        problems = a.get_problems()
+        assert problems["status"] == "no_problems"
+
+    def test_zu_lang_fuer_gitter(self):
+        a = LLMKreuzwortAPI(width=5, height=5)
+        a.add_question("F1", "ABCDEF", "horizontal")
+        a.add_question("F2", "XYZ", "vertical")
+        problems = a.get_problems()
+        assert problems["status"] == "problems_found"
+        msg = problems["problems"][0][1]
+        assert "zu lang" in msg.lower()
+
+    def test_gleiche_orientierung_alle(self):
+        a = LLMKreuzwortAPI()
+        a.add_question("F1", "HALLO", "horizontal")
+        a.add_question("F2", "WELT", "horizontal")
+        a.add_question("F3", "TEST", "horizontal")
+        p = a.get_problems()
+        assert p["status"] == "problems_found"
+        assert len(p["problems"]) == 3
 
 
 # ── Bonuswort-System ─────────────────────────────────────────────────
@@ -163,6 +206,33 @@ class TestBonusSystem:
     def test_hint_zeigt_unterstriche(self, bonus):
         bonus.set_bonus_word("EUROPA")
         assert "_" in bonus.get_bonus_word_hint()
+
+    def test_hint_zeigt_vollstaendig(self, bonus):
+        bonus.set_bonus_word("AA")
+        grid = [['A', 'A'], ['', '']]
+        bonus.update_available_letters(grid)
+        bonus.reveal_next_letter()
+        bonus.reveal_next_letter()
+        assert "VOLLSTAENDIG" in bonus.get_bonus_word_hint()
+
+    def test_is_complete_false(self, bonus):
+        bonus.set_bonus_word("ABC")
+        assert bonus.is_complete is False
+
+    def test_is_complete_true(self, bonus):
+        bonus.set_bonus_word("A")
+        grid = [['A']]
+        bonus.update_available_letters(grid)
+        bonus.reveal_next_letter()
+        assert bonus.is_complete is True
+
+    def test_is_complete_ohne_bonus(self, bonus):
+        assert bonus.is_complete is False
+
+    def test_get_info_enthält_is_complete(self, bonus):
+        bonus.set_bonus_word("X")
+        info = bonus.get_bonus_letter_info()
+        assert "is_complete" in info
 
     def test_available_letters(self, bonus_with_grid):
         assert len(bonus_with_grid.available_letters) > 0
@@ -195,6 +265,27 @@ class TestBonusSystem:
         b = BonusRevealSystem()
         b.available_letters = {'A'}
         assert b.can_reveal_bonus_letter() is False
+
+    def test_duplikat_buchstaben_effect(self):
+        b = BonusRevealSystem()
+        b.set_bonus_word("EFFECT")
+        grid = [['E', 'F', 'F', 'E', 'C', 'T'], ['', '', '', '', '', '']]
+        b.update_available_letters(grid)
+        revealed = 0
+        for _ in range(6):
+            if b.reveal_next_letter():
+                revealed += 1
+        assert revealed == 6
+        assert b.is_complete is True
+
+    def test_duplikat_buchstaben_banana(self):
+        b = BonusRevealSystem()
+        b.set_bonus_word("BANANA")
+        grid = [['B', 'A', 'N', 'A', 'N', 'A'], ['', '', '', '', '', '']]
+        b.update_available_letters(grid)
+        for _ in range(6):
+            b.reveal_next_letter()
+        assert b.is_complete is True
 
 
 # ── BonusWordConstraints ─────────────────────────────────────────────
