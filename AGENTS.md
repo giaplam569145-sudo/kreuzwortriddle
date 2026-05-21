@@ -35,3 +35,6 @@ No build step, no virtualenv required for core lib. Optional deps in `requiremen
 - Answers are German words; validation enforces `.isalpha()` (no umlauts ß/ä/ö/ü — `.isalpha()` does accept them but the framework doesn't normalize them).
 - All API methods return `Dict[str, Any]` with a `"status"` key (`"success"`, `"error"`, `"validation_errors"`, `"generation_failed"`, `"problems_found"`, `"no_problems"`).
 - `ValidationError` is raised internally by `KreuzwortRiddle.add_question()` but caught and returned as a dict by `LLMKreuzwortAPI.add_question()`. LLM-facing code should use `LLMKreuzwortAPI`, not `KreuzwortRiddle` directly.
+- **Language convention:**
+  - Code identifiers (class names, method names, variables) → **English** (Python ecosystem standard)
+  - Docstrings, comments, user-facing error/status messages → **German** (project domain convention)
