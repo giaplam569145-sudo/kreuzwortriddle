@@ -1,19 +1,18 @@
 #!/usr/bin/env python3
-"""
-Beispiel für die Bonuswort-Feature im Kreuzwort-Riddle Framework
+"""Example for the bonus word feature in the Kreuzwort-Riddle Framework.
 
-Demonstriert wie ein zusätzliches Wort sich aus den Kreuzungspunkten der anderen Wörter ergibt.
+Demonstrates how an additional word can be derived from the intersection
+points of the other words.
 
-Autor: Qwen Code (2025)
+Author: Qwen Code (2025)
 """
 
 from kreuzwortriddle import BonusRevealSystem, BonusWordConstraints, LLMKreuzwortAPI
 
 
+
 def demonstrate_bonus_feature():
-    """
-    Zeigt wie das Bonuswort nach und nach aufgedeckt wird.
-    """
+    """Zeigt, wie das Bonuswort schrittweise aufgedeckt wird."""
 
     # Framework mit Bonuswort-Feature
     api = LLMKreuzwortAPI()
@@ -75,6 +74,10 @@ def demonstrate_bonus_feature():
         print("\n=== BONUSWORT-LOGIK ===\n")
         print("Das Bonuswort 'EUROPA' wird Buchstabe für Buchstabe aufgedeckt:")
         print("- Die Buchstaben stammen aus den Kreuzungspunkten der Wörter")
+        print("- B von Berlin (Position 1,1)")
+        print("- E von Paris (Position 2,1)")
+        print("- U von Rom (Position 3,1)")
+
 
         # LLM-spezifische Hinweise für Bonuswort
         print("\n=== LLM-HINWEISE FÜR BONUSWORT ===\n")
@@ -113,6 +116,7 @@ def demonstrate_bonus_feature():
         for placement in placements:
             print(f"- {placement['answer']} ({placement['orientation']}) an ({placement['x']},{placement['y']})")
 
+
         print(f"\nFinale Bonuswort-Info: {bonus_system.get_bonus_letter_info()}")
 
     else:
@@ -123,6 +127,7 @@ def demonstrate_bonus_feature():
 
 def demonstrate_bonus_word_constraints():
     """Demonstriert die Einschränkungen für Bonuswörter"""
+
 
     print("=== BONUSWORT-EINSCHRÄNKUNGEN ===\n")
 
@@ -144,6 +149,7 @@ def demonstrate_bonus_word_constraints():
     print("\nLLM-Richtlinien:")
     print("- Zweck: Das Bonuswort ergibt sich aus den Kreuzungspunkten der anderen Wörter")
     print("- Mechanismus: Progressiver Enthüllungsmechanismus")
+
 
     print("\n=== EINSCHRÄNKUNGS-DEMO ABGESCHLOSSEN ===\n")
 

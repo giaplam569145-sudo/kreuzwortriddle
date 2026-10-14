@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""
-Kreuzwort-Riddle Framework für LLMs
-Ein Python-Framework zur automatischen Erstellung von Kreuzworträtseln
+"""Crossword Riddle Framework for LLMs.
 
-Für LLMs geschrieben - konzentriert sich auf Fragen/Antworten, nicht auf Logik
-Autor: Qwen Code (2025)
+A Python framework for the automatic creation of crossword puzzles.
+Written for LLMs - focuses on questions/answers, not on logic.
+
+Author: Qwen Code (2025)
 """
 
 from collections import Counter
@@ -72,27 +72,46 @@ class KreuzwortRiddle:
         self.placements: List[WordPlacement] = []
         self.grid: List[List[str]] = [['' for _ in range(width)] for _ in range(height)]
 
+
     def add_question(self, question: str, answer: str, orientation: Orientation = Orientation.HORIZONTAL) -> None:
-        """Fügt eine Frage hinzu mit automatischer Validierung"""
+        """Adds a question with automatic validation.
+
+        Args:
+            question: The text of the question.
+            answer: The answer to the question.
+            orientation: The orientation of the word in the grid.
+
+        Raises:
+            ValidationError: If the question is invalid.
+        """
         new_question = Question(question, answer, len(self.questions) + 1, orientation)
+
+        if self.game_mode:
+            self.game_mode.new_question_created(new_question)
+
         errors = new_question.validate()
 
         if errors:
             raise ValidationError(
-                f"Frage {len(self.questions) + 1} ist ungültig: {', '.join(errors)}",
+                f"Question {len(self.questions) + 1} is invalid: {', '.join(errors)}",
                 [(len(self.questions) + 1, error) for error in errors]
             )
 
         self.questions.append(new_question)
 
     def validate_all_questions(self) -> List[str]:
-        """Validiert alle Fragen und gibt eine Liste von Fehlern zurück"""
+        """Validates all questions and returns a list of errors.
+
+        Returns:
+            A list of strings, where each string is an error message.
+        """
         all_errors = []
 
         for i, question in enumerate(self.questions, 1):
             errors = question.validate()
             if errors:
                 all_errors.extend([f"Frage {i}: {error}" for error in errors])
+
 
         return all_errors
 
@@ -293,7 +312,11 @@ class KreuzwortRiddle:
 
         Prüft Buchstaben-Überschneidungen UND geometrische Machbarkeit
         innerhalb der Gittergrenzen (Länge, Orientierung, Kreuzungsposition).
+
         """
+        problems = []
+
+        for i, question in enumerate(self.questions, 1):
         problems = []
 
         for i, question in enumerate(self.questions, 1):
@@ -335,11 +358,30 @@ class KreuzwortRiddle:
 
                 problems.append((i, msg))
 
+
         return problems
 
+    # Delegate to BonusSystem
+    def set_bonus_word(self, word: str) -> None:
+        self.bonus_system.set_bonus_word(word)
 
-# LLM-FREUNDLICHE API
+    def reveal_next_letter(self) -> Optional[str]:
+        return self.bonus_system.reveal_next_letter(self.grid)
+
+    def get_bonus_word_hint(self) -> str:
+        return self.bonus_system.get_bonus_word_hint()
+
+
+# LLM-FRIENDLY API
 class LLMKreuzwortAPI:
+    """Simplified API specifically for LLMs.
+
+    Usage:
+    1. Create an API instance.
+    2. Add questions with add_question().
+    3. Call validate_all() to find problems.
+    4. Call generate() to create the puzzle.
+    5. In case of errors, use get_problems().
     """
     Vereinfachte API speziell für LLMs
 
@@ -363,8 +405,9 @@ class LLMKreuzwortAPI:
             answer: Die Antwort (muss aus Buchstaben bestehen)
             orientation: "horizontal" oder "vertical"
 
+
         Returns:
-            Dict mit Status und ggf. Fehlermeldungen
+            A dictionary with the status and, if applicable, error messages.
         """
         try:
             orient = Orientation.HORIZONTAL if orientation.lower() == "horizontal" else Orientation.VERTICAL
@@ -378,51 +421,77 @@ class LLMKreuzwortAPI:
 
         return {"status": "success", "message": "Frage erfolgreich hinzugefügt"}
 
+
     def validate_all(self) -> Dict[str, Any]:
-        """Validiert alle Fragen und gibt detailliertes Feedback"""
+        """Validates all questions and provides detailed feedback.
+
+        Returns:
+            A dictionary with the validation status and detailed error
+            information if any errors are found.
+        """
         errors = self.riddle.validate_all_questions()
 
         if errors:
             return {
                 "status": "validation_errors",
                 "errors": errors,
-                "suggestion": "Überprüfe die Fehlermeldungen und korrigiere die entsprechenden Fragen"
+                "suggestion": "Review the error messages and correct the corresponding questions"
             }
         else:
             return {"status": "valid", "message": "Alle Fragen sind gültig"}
 
+
     def generate(self) -> Dict[str, Any]:
-        """Generiert das Rätsel und gibt Status zurück"""
+        """Generates the puzzle and returns the status.
+
+        Returns:
+            A dictionary with the generation status and a success or failure
+            message.
+        """
         success = self.riddle.generate_grid()
 
         if success:
-            return {"status": "success", "message": "Rätsel erfolgreich generiert"}
+            return {"status": "success", "message": "Riddle generated successfully"}
         else:
             return {
                 "status": "generation_failed",
-                "message": "Rätsel konnte nicht generiert werden",
-                "suggestion": "Rufe get_problems() auf um problematische Fragen zu identifizieren"
+                "message": "Could not generate riddle",
+                "suggestion": "Call get_problems() to identify problematic questions"
             }
 
     def get_problems(self) -> Dict[str, Any]:
-        """Identifiziert spezifische Probleme mit den Fragen"""
+        """Identifies specific problems with the questions.
+
+        Returns:
+            A dictionary containing information about the problematic
+            questions.
+        """
         problems = self.riddle.get_problematic_questions()
 
         if problems:
             return {
                 "status": "problems_found",
                 "problems": problems,
-                "suggestion": "Entferne oder ersetze die problematischen Fragen"
+                "suggestion": "Remove or replace the problematic questions"
             }
         else:
             return {"status": "no_problems"}
 
     def get_grid(self) -> List[List[str]]:
-        """Gibt das aktuelle Gitter zurück"""
+        """Returns the current grid.
+
+        Returns:
+            A 2D list representing the crossword grid.
+        """
         return self.riddle.grid
 
     def get_placements(self) -> List[Dict[str, Any]]:
-        """Gibt die Platzierungen der Wörter zurück"""
+        """Returns the placements of the words.
+
+        Returns:
+            A list of dictionaries, where each dictionary represents a word
+            placement.
+        """
         return [
             {
                 "question": placement.question.question_text,
@@ -435,7 +504,6 @@ class LLMKreuzwortAPI:
             }
             for placement in self.riddle.placements
         ]
-
 
 # BONUSWORT-ENTHÜLLUNGSMECHANISMUS
 class BonusRevealSystem:
@@ -631,3 +699,4 @@ if __name__ == "__main__":
     if generation["status"] == "success":
         bonus_system.update_available_letters(api.get_grid())
         print(f"Bonuswort-Info: {bonus_system.get_bonus_letter_info()}")
+

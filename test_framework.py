@@ -30,6 +30,14 @@ def api_with_words():
     return a
 
 
+    def test_get_problematic_questions(self):
+        """Test identifying problematic questions."""
+        self.api.add_question("No overlap", "abc", "horizontal")
+        self.api.add_question("Different letters", "def", "vertical")
+        result = self.api.get_problems()
+        self.assertEqual(result["status"], "problems_found")
+        self.assertIn("has no common letters", result["problems"][0][1])
+
 @pytest.fixture
 def bonus():
     return BonusRevealSystem()
@@ -50,6 +58,58 @@ def bonus_with_grid():
     b.update_available_letters(sim_grid)
     return b
 
+
+class TestBonusSystem(unittest.TestCase):
+    """Test suite for the BonusRevealSystem."""
+
+    def setUp(self):
+        """Set up a new API instance for each test."""
+        self.api = LLMKreuzwortAPI()
+
+    def test_set_bonus_word(self):
+        """Test setting the bonus word."""
+        self.api.set_bonus_word("EUROPA")
+        self.assertEqual(self.api.get_bonus_word_hint(), "Bonus word: ______")
+
+    def test_reveal_bonus_letter(self):
+        """Test revealing a bonus letter."""
+        self.api.add_question("Capital of Germany", "Berlin", "horizontal")
+        self.api.generate()
+        self.api.set_bonus_word("BERLIN")
+        letter = self.api.reveal_next_bonus_letter()
+        self.assertEqual(letter, "B")
+        self.assertEqual(self.api.get_bonus_word_hint(), "Bonus word: B_____")
+
+class TestGameModes(unittest.TestCase):
+    """Test suite for the game modes."""
+
+    def setUp(self):
+        """Set up a new API instance for each test."""
+        self.api = LLMKreuzwortAPI()
+
+    def test_theme_based_riddle(self):
+        """Test the theme-based riddle game mode."""
+        self.api.set_game_mode(ThemeBasedRiddle("Capital"))
+        self.api.add_question("Capital of Norway", "Oslo", "horizontal")
+        self.api.add_question("A fruit", "Apple", "vertical")
+        self.api.generate()
+        placements = self.api.get_placements()
+        self.assertEqual(len(placements), 1)
+        self.assertEqual(placements[0]["answer"], "Oslo")
+
+    def test_number_riddle(self):
+        """Test the number riddle game mode."""
+        self.api.set_game_mode(NumberRiddle())
+        result = self.api.add_question("Year of the first moon landing", "1969", "horizontal")
+        self.assertEqual(result["status"], "success")
+
+    def test_reverse_riddle(self):
+        """Test the reverse riddle game mode."""
+        self.api.set_game_mode(ReverseRiddle())
+        self.api.add_question("A word", "hello", "horizontal")
+        self.api.generate()
+        placements = self.api.get_placements()
+        self.assertEqual(placements[0]["answer"], "olleh")
 
 @pytest.fixture
 def constraints():
@@ -314,3 +374,4 @@ class TestConstraints:
     def test_zu_kurzes_bonuswort(self, constraints):
         errors = constraints.validate_bonus_word("AB", {'A', 'B'})
         assert len(errors) > 0
+

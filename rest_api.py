@@ -4,8 +4,10 @@ REST-API fuer das Kreuzwort-Riddle Framework
 
 Ermöglicht LLMs ohne direkten Python-Zugriff die Framework-Funktionalitaeten zu nutzen.
 Thread-sicher durch Session-basierte Instanzen.
+"""
 
-Autor: Qwen Code (2025)
+
+Author: Qwen Code (2025)
 """
 
 import os
@@ -44,7 +46,18 @@ def _bonus() -> BonusRevealSystem:
     return cast(BonusRevealSystem, session["bonus_system"])
 
 
+def handle_exceptions(f):
+    """Decorator to handle common exceptions in API endpoints."""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        try:
+            return f(*args, **kwargs)
+        except Exception as e:
+            return jsonify({"status": "error", "message": f"Internal error: {str(e)}"}), 500
+    return decorated_function
+
 @app.route('/api/questions', methods=['POST'])
+@handle_exceptions
 def add_question():
     """POST /api/questions — Frage hinzufuegen"""
     try:
@@ -63,6 +76,7 @@ def add_question():
 
 
 @app.route('/api/validate', methods=['GET'])
+@handle_exceptions
 def validate_all():
     """GET /api/validate — Alle Fragen validieren"""
     try:
@@ -72,6 +86,7 @@ def validate_all():
 
 
 @app.route('/api/generate', methods=['POST'])
+@handle_exceptions
 def generate_riddle():
     """POST /api/generate — Raetsel generieren"""
     try:
@@ -90,6 +105,7 @@ def generate_riddle():
 
 
 @app.route('/api/problems', methods=['GET'])
+@handle_exceptions
 def get_problems():
     """GET /api/problems — Problematische Fragen identifizieren"""
     try:
@@ -99,6 +115,7 @@ def get_problems():
 
 
 @app.route('/api/bonus', methods=['POST', 'GET'])
+@handle_exceptions
 def handle_bonus():
     """POST/GET /api/bonus — Bonuswort setzen oder abfragen"""
     try:
@@ -125,6 +142,7 @@ def handle_bonus():
 
 
 @app.route('/api/bonus/reveal', methods=['POST'])
+@handle_exceptions
 def reveal_bonus_letter():
     """POST /api/bonus/reveal — Naechsten Buchstaben aufdecken"""
     try:
@@ -143,6 +161,7 @@ def reveal_bonus_letter():
 
 
 @app.route('/api/status', methods=['GET'])
+@handle_exceptions
 def get_status():
     """GET /api/status — Framework-Status abfragen"""
     try:
@@ -166,6 +185,7 @@ def get_status():
 
 
 @app.route('/api/reset', methods=['POST'])
+@handle_exceptions
 def reset_framework():
     """POST /api/reset — Framework zuruecksetzen"""
     try:

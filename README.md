@@ -1,155 +1,113 @@
-# Kreuzwort-Riddle Framework
+# Crossword Riddle Framework
 
-Ein Python-Framework zur automatischen Erstellung von Kreuzworträtseln, speziell entwickelt für LLMs.
+A Python framework for automatically creating crossword puzzles, specially developed for LLMs.
 
-## Überblick
+## Overview
 
-Das Kreuzwort-Riddle Framework automatisiert die technische Komplexität der Rätselerstellung, sodass sich LLMs auf das Wesentliche konzentrieren können: die Erstellung von Fragen und Antworten.
+The Crossword Riddle Framework automates the technical complexity of puzzle creation, allowing LLMs to focus on what they do best: creating questions and answers.
 
-### Hauptmerkmale
+### Main Features
 
-- **LLM-freundliche API**: Einfache Eingabe von Fragen und Antworten
-- **Automatische Validierung**: Prüfung auf widersprüchliche Kreuzungen
-- **Intelligentes Fehler-Feedback**: Präzise Hinweise für Korrekturen
-- **Resilienz bei unmöglichen Rätseln**: Identifikation "fauler" Fragen
-- **Bonuswort-System**: Progressive Enthüllung zusätzlicher Wörter
-- **REST-API**: Fernzugriff für externe Systeme
-- **MCP-Server**: Integration in MCP-fähige Entwicklungsumgebungen
+- **LLM-Friendly API**: Simple input of questions and answers.
+- **Automatic Validation**: Checks for conflicting intersections.
+- **Intelligent Error Feedback**: Precise hints for corrections.
+- **Resilience for Impossible Puzzles**: Identification of "lazy" questions.
+- **Bonus Word System**: Progressive revealing of additional words.
+- **REST API**: Remote access for external systems.
+- **MCP Server**: Integration into MCP-enabled development environments.
 
 ## Installation
 
 ```bash
-# Klonen des Repositories
+# Clone the repository
 git clone <repository-url>
-cd kreuzwortriddle
+cd crossword-riddle
 
-# Abhängigkeiten installieren
+# Install dependencies
 pip install -r requirements.txt
 ```
 
-## Schnellstart
+## Quick Start
 
-### Grundlegende Nutzung
+### Basic Usage
 
 ```python
 from kreuzwortriddle import LLMKreuzwortAPI
 
-# API-Instanz erstellen
+# Create an API instance
 api = LLMKreuzwortAPI(width=15, height=15)
 
-# Fragen hinzufügen
-api.add_question("Hauptstadt von Deutschland", "Berlin", "horizontal")
-api.add_question("Hauptstadt von Frankreich", "Paris", "vertical")
+# Add questions
+api.add_question("Capital of Germany", "Berlin", "horizontal")
+api.add_question("Capital of France", "Paris", "vertical")
 
-# Validieren
+# Validate
 validation = api.validate_all()
 print(validation)
 
-# Rätsel generieren
+# Generate puzzle
 generation = api.generate()
 print(generation)
 
-# Gitter anzeigen
+# Display grid
 if generation["status"] == "success":
     grid = api.get_grid()
     for row in grid:
         print(' '.join(cell if cell else '.' for cell in row))
 ```
 
-### Bonuswort-System
+### Bonus Word System
 
 ```python
-from kreuzwortriddle import BonusRevealSystem
-
-# Bonuswort-System initialisieren
-bonus_system = BonusRevealSystem()
-bonus_system.set_bonus_word("EUROPA")
-
-# Nach erfolgreicher Generierung
+# After successful generation
 if generation["status"] == "success":
-    bonus_system.update_available_letters(api.get_grid())
-    
-    # Buchstaben progressiv aufdecken
-    while bonus_system.can_reveal_bonus_letter():
-        letter = bonus_system.reveal_next_letter()
-        print(f"Aufgedeckt: {letter}")
-        print(f"Status: {bonus_system.get_bonus_word_hint()}")
+    api.set_bonus_word("EUROPA")
+
+    # Progressively reveal letters
+    while True:
+        letter = api.reveal_next_bonus_letter()
+        if not letter:
+            break
+        print(f"Revealed: {letter}")
+        print(f"Status: {api.get_bonus_word_hint()}")
 ```
 
-## API-Referenz
+## API Reference
 
 ### LLMKreuzwortAPI
 
-Die Haupt-API-Klasse für die Interaktion mit dem Framework.
+The main API class for interacting with the framework.
 
-#### Methoden
+#### Methods
 
-- `add_question(question, answer, orientation)`: Fügt eine neue Frage hinzu
-- `validate_all()`: Validiert alle Fragen
-- `generate()`: Generiert das Rätsel
-- `get_problems()`: Identifiziert problematische Fragen
-- `get_grid()`: Gibt das generierte Gitter zurück
-- `get_placements()`: Gibt Wortplatzierungen zurück
+- `add_question(question, answer, orientation)`: Adds a new question.
+- `validate_all()`: Validates all questions.
+- `generate()`: Generates the puzzle.
+- `get_problems()`: Identifies problematic questions.
+- `get_grid()`: Returns the generated grid.
+- `get_placements()`: Returns the word placements.
+- `set_bonus_word(word)`: Sets the bonus word.
+- `reveal_next_bonus_letter()`: Reveals the next letter of the bonus word.
+- `get_bonus_word_hint()`: Returns the current hint for the bonus word.
 
-#### Rückgabeformate
+## REST API
 
-Alle Methoden geben Dictionaries mit konsistenter Struktur zurück:
-
-```python
-{
-    "status": "success|error|validation_errors|generation_failed",
-    "message": "Beschreibung des Ergebnisses",
-    "data": {...}  # Optional, zusätzliche Daten
-}
-```
-
-### BonusRevealSystem
-
-Verwaltet die progressive Enthüllung des Bonuswortes.
-
-#### Methoden
-
-- `set_bonus_word(word)`: Setzt das Bonuswort
-- `update_available_letters(grid)`: Aktualisiert verfügbare Buchstaben
-- `can_reveal_bonus_letter()`: Prüft ob ein Buchstabe aufgedeckt werden kann
-- `reveal_next_letter()`: Deckt den nächsten Buchstaben auf
-- `get_bonus_word_hint()`: Gibt aktuellen Hinweis zurück
-
-## REST-API
-
-Der Server kann mit `python rest_api.py` gestartet werden:
+The server can be started with `python rest_api.py`:
 
 ### Endpoints
 
-- `POST /api/questions`: Frage hinzufügen
-- `GET /api/validate`: Alle Fragen validieren
-- `POST /api/generate`: Rätsel generieren
-- `GET /api/problems`: Probleme identifizieren
-- `GET/POST /api/bonus`: Bonuswort verwalten
-- `POST /api/bonus/reveal`: Bonusbuchstabe aufdecken
-- `GET /api/status`: Framework-Status abfragen
-- `POST /api/reset`: Framework zurücksetzen
+- `POST /api/questions`: Add a question.
+- `GET /api/validate`: Validate all questions.
+- `POST /api/generate`: Generate the puzzle.
+- `GET /api/problems`: Identify problems.
+- `POST /api/bonus`: Set the bonus word.
+- `POST /api/bonus/reveal`: Reveal a bonus letter.
+- `GET /api/status`: Query the framework status.
+- `POST /api/reset`: Reset the framework.
 
-### Beispiel-Requests
+## MCP Server
 
-```bash
-# Frage hinzufügen
-curl -X POST http://localhost:5000/api/questions \
-  -H "Content-Type: application/json" \
-  -d '{"question": "Hauptstadt von Deutschland", "answer": "Berlin", "orientation": "horizontal"}'
-
-# Rätsel generieren
-curl -X POST http://localhost:5000/api/generate
-
-# Bonuswort setzen
-curl -X POST http://localhost:5000/api/bonus \
-  -H "Content-Type: application/json" \
-  -d '{"bonus_word": "EUROPA"}'
-```
-
-## MCP-Server
-
-Der MCP-Server ermöglicht die Integration in MCP-fähige Entwicklungsumgebungen:
+The MCP server allows integration into MCP-enabled development environments:
 
 ```bash
 python mcp_server.py
@@ -237,6 +195,8 @@ if validation["status"] == "valid":
 
 ## Testing
 
+To run the test suite, use the following command:
+
 ```bash
 # Pytest-Tests (32 Tests)
 pytest test_framework.py -v
@@ -250,30 +210,13 @@ python bonus_example.py
 # Lint & Type Check
 python -m ruff check .
 python -m mypy kreuzwortriddle.py
+
 ```
-
-## Architektur
-
-Das Framework besteht aus mehreren Schichten:
-
-1. **Core Layer**: `KreuzwortRiddle` - Hauptlogik
-2. **API Layer**: `LLMKreuzwortAPI` - LLM-freundliche Schnittstelle
-3. **Bonus Layer**: `BonusRevealSystem` - Bonuswort-Logik
-4. **Service Layer**: REST-API und MCP-Server
-5. **Utility Layer**: Hilfsfunktionen und Validierung
 
 ## Contributing
 
-1. Fork erstellen
-2. Feature-Branch erstellen
-3. Änderungen implementieren
-4. Tests durchführen
-5. Pull Request erstellen
+Contributions are welcome! Please see the `CONTRIBUTING.md` file for more information.
 
-## Lizenz
+## License
 
-MIT License - siehe LICENSE Datei für Details.
-
-## Autor
-
-Qwen Code (2025)
+MIT License - see the LICENSE file for details.
