@@ -2,6 +2,14 @@
 
 A Python framework for automatically creating crossword puzzles, specially developed for LLMs.
 
+## 📖 Documentation & Handbuch
+
+Ausführliche Entwickler- und Benutzerdokumentation inklusive Architektur-Diagrammen, REST-API-Beispielen, MCP-Tool-Referenz und visuellen Schemas finden Sie im zentralen Handbuch:
+
+👉 **[Entwickler- und Benutzerhandbuch (HANDBUCH.md)](HANDBUCH.md)**
+
+---
+
 ## Overview
 
 The Crossword Riddle Framework automates the technical complexity of puzzle creation, allowing LLMs to focus on what they do best: creating questions and answers.
@@ -198,7 +206,7 @@ if validation["status"] == "valid":
 To run the test suite, use the following command:
 
 ```bash
-# Pytest-Tests (32 Tests)
+# Pytest-Tests (49 Tests)
 pytest test_framework.py -v
 
 # Beispiel-Nutzung
@@ -206,11 +214,6 @@ python example_usage.py
 
 # Bonuswort-Beispiele
 python bonus_example.py
-
-# Lint & Type Check
-python -m ruff check .
-python -m mypy kreuzwortriddle.py
-
 ```
 
 ## Contributing
