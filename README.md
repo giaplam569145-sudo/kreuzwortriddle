@@ -1,225 +1,275 @@
-# Crossword Riddle Framework
+<p align="center">
+  <img src="assets/banner.svg" alt="Crossword Riddle Framework Banner" width="100%">
+</p>
 
-A Python framework for automatically creating crossword puzzles, specially developed for LLMs.
+<p align="center">
+  <a href="https://python.org"><img src="https://img.shields.io/badge/Python-3.8%2B-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python 3.8+"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge" alt="License MIT"></a>
+  <a href="test_framework.py"><img src="https://img.shields.io/badge/Tests-49%20Passed-brightgreen.style=for-the-badge?style=for-the-badge" alt="49 Tests Passing"></a>
+  <a href="#mcp-server"><img src="https://img.shields.io/badge/MCP-Supported-8A2BE2?style=for-the-badge" alt="MCP Server Supported"></a>
+  <a href="#rest-api"><img src="https://img.shields.io/badge/REST%20API-Flask-000000?style=for-the-badge&logo=flask&logoColor=white" alt="Flask REST API"></a>
+</p>
 
-## 📖 Documentation & Handbuch
+---
 
-Ausführliche Entwickler- und Benutzerdokumentation inklusive Architektur-Diagrammen, REST-API-Beispielen, MCP-Tool-Referenz und visuellen Schemas finden Sie im zentralen Handbuch:
+## 📖 Dokumentation & Handbuch
+
+Dieses **README** bietet eine schnelle, vollständige und präzise Übersicht über das **Crossword Riddle Framework**.
+
+Suchen Sie nach tiefgehenden Architektur-Diagrammen, UML-Klassendiagrammen, Sequenzdiagrammen oder JSON-Schemas? Rufen Sie unser zentrales Handbuch auf:
 
 👉 **[Entwickler- und Benutzerhandbuch (HANDBUCH.md)](HANDBUCH.md)**
 
 ---
 
-## Overview
+## 💡 Übersicht
 
-The Crossword Riddle Framework automates the technical complexity of puzzle creation, allowing LLMs to focus on what they do best: creating questions and answers.
+Das **Crossword Riddle Framework** ist eine spezialisierte Python-Bibliothek zur automatischen Generierung von 2D-Kreuzworträtseln. Es wurde speziell für die Integration mit **Large Language Models (LLMs)** und KI-Agenten konzipiert.
 
-### Main Features
+### Das gelöste Problem
+LLMs besitzen herausragendes Allgemeinwissen und kreative Sprachfähigkeiten, scheitern jedoch regelmäßig an **geometrischen und räumlichen Beschränkungen** (wie zweidimensionalen Schnittpunkten von Wörtern, Wortlängen oder Kollisionsprüfungen).
 
-- **LLM-Friendly API**: Simple input of questions and answers.
-- **Automatic Validation**: Checks for conflicting intersections.
-- **Intelligent Error Feedback**: Precise hints for corrections.
-- **Resilience for Impossible Puzzles**: Identification of "lazy" questions.
-- **Bonus Word System**: Progressive revealing of additional words.
-- **REST API**: Remote access for external systems.
-- **MCP Server**: Integration into MCP-enabled development environments.
+Das Crossword Riddle Framework nimmt dem LLM die technische Komplexität ab:
+1. **Das LLM liefert die Inhalte**: Fragen, Antworten und gewünschte Ausrichtungen.
+2. **Das Framework übernimmt die Geometrie**: Algorithmisches Rekursiv-Backtracking, Wortkreuzungsprüfungen, Randkontrollen und Parallelitätsprüfungen.
+3. **Präzises Feedback**: Wenn Wörter geometrisch nicht zusammenpassen, liefert das Framework strukturierte Korrekturhinweise, mit denen das LLM gezielt nachbessern kann.
 
-## Installation
+---
+
+## ✨ Hauptmerkmale
+
+- ⚡ **LLM-optimierte API (`LLMKreuzwortAPI`)**: Liefert verlässliche Dictionaries mit klarem `"status"`-Feld (`success`, `error`, `validation_errors`, `generation_failed`, `problems_found`).
+- 🔄 **Rekursive Backtracking Engine**: Platziert Wörter optimal im 2D-Gitter mit Unterstützung für Permutations- und Monte-Carlo-Fallbacks bei komplexen Wortmengen.
+- 🎁 **Progressives Bonuswort-System (`BonusRevealSystem`)**: Baut ein übergeordnetes Lösungswort schrittweise aus den verfügbaren Buchstaben des generierten Gitters auf.
+- 🎮 **Erweiterbare Spielmodi (`GameModes`)**: Flexible Anpassung der Rätsellogik (z. B. `ThemeBasedRiddle`, `NumberRiddle`, `ReverseRiddle`).
+- 🌐 **Flask REST API**: Thread-sichere HTTP-Schnittstelle mit Session-Verwaltung für Remote-Integrationen.
+- 🤖 **Model Context Protocol (MCP) Server**: Native Anbindung an MCP-fähige Clients wie Claude Desktop, Cursor oder VS Code (8 Tools).
+- 📦 **Zero Core Dependencies**: Die Kernbibliothek benötigt ausschließlich die Python-Standardbibliothek.
+
+---
+
+## 🚀 Installation & Voraussetzungen
+
+### Systemvoraussetzungen
+- **Python**: 3.8 oder höher (empfohlen: Python 3.12)
+- **Kern-Bibliothek**: Keine externen Abhängigkeiten erforderlich!
+
+### Installation
 
 ```bash
-# Clone the repository
-git clone <repository-url>
+# Repository klonen
+git clone https://github.com/example/crossword-riddle.git
 cd crossword-riddle
 
-# Install dependencies
+# Optional: Abhängigkeiten für REST API, MCP Server und Test-Runner installieren
 pip install -r requirements.txt
 ```
 
-## Quick Start
+#### Inhalt von `requirements.txt`:
+- `flask` (REST API Server)
+- `mcp` (Model Context Protocol Integration)
+- `pytest` (Test-Framework)
 
-### Basic Usage
+---
+
+## ⚡ Schnellstart & Code-Beispiele
+
+### 1. Grundlegende Nutzung (`LLMKreuzwortAPI`)
 
 ```python
 from kreuzwortriddle import LLMKreuzwortAPI
 
-# Create an API instance
+# Initialisiere die API mit einer Gittergröße von 15x15
 api = LLMKreuzwortAPI(width=15, height=15)
 
-# Add questions
-api.add_question("Capital of Germany", "Berlin", "horizontal")
-api.add_question("Capital of France", "Paris", "vertical")
+# Fragen und Antworten hinzufügen
+api.add_question("Hauptstadt von Deutschland", "Berlin", "horizontal")
+api.add_question("Fluss durch Dresden", "Elbe", "vertical")
+api.add_question("Süddeutsches Bundesland", "Bayern", "horizontal")
 
-# Validate
+# Inputs validieren
 validation = api.validate_all()
-print(validation)
+print("Validierung:", validation)
+# -> {'status': 'valid', 'message': 'Alle Fragen sind gültig'}
 
-# Generate puzzle
+# Rätsel-Gitter generieren
 generation = api.generate()
-print(generation)
+print("Generierung:", generation)
+# -> {'status': 'success', 'message': 'Riddle generated successfully'}
 
-# Display grid
+# Gitter im Terminal ausgeben
 if generation["status"] == "success":
     grid = api.get_grid()
     for row in grid:
-        print(' '.join(cell if cell else '.' for cell in row))
+        print(" ".join(cell if cell else "." for cell in row))
+
+    # Genaue Wort-Platzierungen abfragen
+    placements = api.get_placements()
+    for p in placements:
+        print(f"#{p['number']} [{p['orientation']}] {p['answer']} an (x={p['x']}, y={p['y']})")
 ```
 
-### Bonus Word System
+---
+
+### 2. Bonuswort-System (`BonusRevealSystem`)
+
+Das Bonuswort-System erlaubt das stufenweise Aufdecken eines Lösungswortes über die im Gitter platzierten Buchstaben.
 
 ```python
-# After successful generation
-if generation["status"] == "success":
-    api.set_bonus_word("EUROPA")
+from kreuzwortriddle import LLMKreuzwortAPI
 
-    # Progressively reveal letters
-    while True:
-        letter = api.reveal_next_bonus_letter()
-        if not letter:
-            break
-        print(f"Revealed: {letter}")
-        print(f"Status: {api.get_bonus_word_hint()}")
+api = LLMKreuzwortAPI()
+api.add_question("Hauptstadt von Deutschland", "Berlin", "horizontal")
+api.add_question("Fluss durch Dresden", "Elbe", "vertical")
+
+if api.generate()["status"] == "success":
+    # Bonuswort setzen
+    api.set_bonus_word("BERLIN")
+    print(api.get_bonus_word_hint())
+    # -> Bonuswort: ______ (0/6 Buchstaben, in Arbeit)
+
+    # Nächsten Buchstaben schrittweise enthüllen
+    letter = api.reveal_next_bonus_letter()
+    print("Aufgedeckter Buchstabe:", letter)  # 'B'
+    print(api.get_bonus_word_hint())
+    # -> Bonuswort: B_____ (1/6 Buchstaben, in Arbeit)
 ```
 
-## API Reference
+---
 
-### LLMKreuzwortAPI
+### 3. Spielmodi verwenden (`modes.py`)
 
-The main API class for interacting with the framework.
+```python
+from kreuzwortriddle import LLMKreuzwortAPI
+from modes import ThemeBasedRiddle, NumberRiddle, ReverseRiddle
 
-#### Methods
+api = LLMKreuzwortAPI()
 
-- `add_question(question, answer, orientation)`: Adds a new question.
-- `validate_all()`: Validates all questions.
-- `generate()`: Generates the puzzle.
-- `get_problems()`: Identifies problematic questions.
-- `get_grid()`: Returns the generated grid.
-- `get_placements()`: Returns the word placements.
-- `set_bonus_word(word)`: Sets the bonus word.
-- `reveal_next_bonus_letter()`: Reveals the next letter of the bonus word.
-- `get_bonus_word_hint()`: Returns the current hint for the bonus word.
+# Beispiel 1: Themenfilter aktivieren
+api.set_game_mode(ThemeBasedRiddle("Hauptstadt"))
+api.add_question("Hauptstadt von Frankreich", "Paris", "horizontal")  # WIRD ÜBERNOMMEN
+api.add_question("Ein Obst", "Apfel", "vertical")                      # WIRD GEFILTERT
 
-## REST API
+# Beispiel 2: Zahlenrätsel (erlaubt Ziffern in Antworten)
+# api.set_game_mode(NumberRiddle())
 
-The server can be started with `python rest_api.py`:
+# Beispiel 3: Umgekehrtes Rätsel (dreht Antworten automatisch um)
+# api.set_game_mode(ReverseRiddle())
+```
 
-### Endpoints
+---
 
-- `POST /api/questions`: Add a question.
-- `GET /api/validate`: Validate all questions.
-- `POST /api/generate`: Generate the puzzle.
-- `GET /api/problems`: Identify problems.
-- `POST /api/bonus`: Set the bonus word.
-- `POST /api/bonus/reveal`: Reveal a bonus letter.
-- `GET /api/status`: Query the framework status.
-- `POST /api/reset`: Reset the framework.
+## 📐 Modularchitektur & Projektstruktur
 
-## MCP Server
+Das Framework ist modular aufgebaut und trennt Kernlogik, Datenmodelle, Algorithmen und Schnittstellen sauber voneinander:
 
-The MCP server allows integration into MCP-enabled development environments:
+```
+crossword-riddle/
+├── assets/
+│   └── banner.svg             # Projektbanner
+├── models.py                  # Dataclasses: Question, WordPlacement, Orientation, ValidationError
+├── grid_generator.py          # Backtracking-Algorithmus zur Gitterplatzierung (GridGenerator)
+├── bonus_system.py            # Standalone Bonuswort-Logik (BonusSystem)
+├── gamemode.py                # Abstrakte Basisklasse GameMode
+├── modes.py                   # Concrete GameModes (ThemeBasedRiddle, NumberRiddle, ReverseRiddle)
+├── kreuzwortriddle.py         # Haupt-Orchestrierung (KreuzwortRiddle) & LLM API (LLMKreuzwortAPI)
+├── rest_api.py                # Flask REST-API Server (Session-basiert)
+├── mcp_server.py              # Model Context Protocol Server (Stdio)
+├── test_framework.py          # Test-Suite (49 Pytest Unit-Tests)
+├── example_usage.py           # Runnable CLI-Demonstration
+├── bonus_example.py           # Demo für das Bonuswort-System
+├── HANDBUCH.md                # Umfassendes Entwickler- und Benutzerhandbuch
+├── pyproject.toml             # Konfiguration für ruff, mypy und pytest
+└── requirements.txt           # Optionale Paketabhängigkeiten
+```
 
+---
+
+## 🌐 REST-API Referenz
+
+Der REST-API Server (`rest_api.py`) erlaubt Remote-Systemen und Nicht-Python-Umgebungen den Zugriff auf das Framework.
+
+### Server starten
+```bash
+python rest_api.py
+```
+*Läuft standardmäßig auf `http://0.0.0.0:5000`.*
+
+### Endpunkte Overview
+
+| Method | Endpoint | Beschreibung |
+|---|---|---|
+| `POST` | `/api/questions` | Neue Frage mit Fragetext, Antwort und Orientierung hinzufügen |
+| `GET` | `/api/validate` | Alle aktuellen Fragen validieren |
+| `POST` | `/api/generate` | Generiert das Gitter und gibt Gitter matrix & Platzierungen zurück |
+| `GET` | `/api/problems` | Analysiert geometrische Unmöglichkeiten oder isolierte Wörter |
+| `POST` | `/api/bonus` | Bonuswort setzen (`{"bonus_word": "..."}`) |
+| `GET` | `/api/bonus` | Status und Hinweis des Bonuswortes abfragen |
+| `POST` | `/api/bonus/reveal` | Deckt den nächsten verfügbaren Bonusbuchstaben auf |
+| `GET` | `/api/status` | Gibt den Server- und Framework-Status zurück |
+| `POST` | `/api/reset` | Setzt die API- und Bonus-Instanzen der Session zurück |
+
+### cURL-Beispiel
+
+```bash
+# 1. Frage hinzufügen
+curl -X POST http://localhost:5000/api/questions \
+  -H "Content-Type: application/json" \
+  -d '{"question": "Hauptstadt von Deutschland", "answer": "Berlin", "orientation": "horizontal"}'
+
+# 2. Rätsel generieren
+curl -X POST http://localhost:5000/api/generate
+```
+
+---
+
+## 🤖 MCP Server (Model Context Protocol)
+
+Das Framework beinhaltet einen nativer **MCP-Server** (`mcp_server.py`), mit dem LLM-Agents (z. B. Anthropic Claude, Cursor IDE) Rätsel über Stdio-Tool-Calls steuern können.
+
+### MCP-Server starten
 ```bash
 python mcp_server.py
 ```
 
-Verfügbare Tools:
-- `add_question`: Frage hinzufügen
-- `validate_all`: Fragen validieren
-- `generate_riddle`: Rätsel generieren
-- `get_problems`: Probleme identifizieren
-- `set_bonus_word`: Bonuswort setzen
-- `reveal_bonus_letter`: Bonusbuchstabe aufdecken
-- `get_status`: Status abfragen
-- `reset_framework`: Framework zurücksetzen
+### Registrierte MCP Tools
+1. `add_question`: Fügt eine Frage hinzu.
+2. `validate_all`: Validiert alle hinzugefügten Fragen.
+3. `generate_riddle`: Erzeugt das 2D-Gitter.
+4. `get_problems`: Liefert Problemanalysen und Korrekturvorschläge.
+5. `set_bonus_word`: Setzt das aufzudeckende Bonuswort.
+6. `reveal_bonus_letter`: Enthüllt den nächsten Bonusbuchstaben.
+7. `get_status`: Fragt Zähler und Versionen ab.
+8. `reset_framework`: Setzt die Rätselinstanz zurück.
 
-## Validierungsregeln
+---
 
-### Fragen
+## 🧪 Qualitätssicherung, Testing & Pre-Commit
 
-- Frage-Text darf nicht leer sein
-- Antwort muss 2-20 Buchstaben lang sein
-- Antwort darf nur Buchstaben enthalten (keine Zahlen oder Sonderzeichen)
+Das Projekt garantiert höchste Stabilität durch eine umfassende Testabdeckung (**49 Unit-Tests**).
 
-### Rätselgenerierung
-
-- Mindestens 1 Frage erforderlich (aber 1+ empfohlen für echte Kreuzung)
-- Fragen müssen sich kreuzen können (gemeinsame Buchstaben)
-- Gittergrenzen müssen eingehalten werden
-
-### Bonuswort
-
-- 3-8 Buchstaben Länge
-- Alle Buchstaben müssen im Gitter verfügbar sein
-- Maximal ein Buchstabe pro Wort für das Bonuswort
-
-## Fehlerbehandlung
-
-Das Framework gibt detaillierte Fehlermeldungen für LLMs:
-
-### Häufige Fehler
-
-- `"Frage-Text ist leer"` → Sinnvollen Fragetext eingeben
-- `"Antwort ist leer"` → Gültige Antwort eingeben
-- `"Antwort muss mindestens 2 Buchstaben lang sein"` → Längere Antwort verwenden
-- `"Antwort darf nur Buchstaben enthalten"` → Sonderzeichen entfernen
-- `"Antwort hat keine gemeinsamen Buchstaben mit anderen Antworten"` → Frage mit überschneidenden Buchstaben hinzufügen
-
-## Beispiele
-
-### Vollständiges Beispiel
-
-```python
-from kreuzwortriddle import LLMKreuzwortAPI, BonusRevealSystem
-
-# Framework initialisieren
-api = LLMKreuzwortAPI()
-bonus_system = BonusRevealSystem()
-
-# Fragen hinzufügen
-questions = [
-    ("Hauptstadt von Deutschland", "Berlin", "horizontal"),
-    ("Fluss in Deutschland", "Elbe", "vertical"),
-    ("Bundesland", "Bayern", "horizontal"),
-    ("Gebirge", "Alpen", "vertical")
-]
-
-for question, answer, orientation in questions:
-    result = api.add_question(question, answer, orientation)
-    print(f"Frage hinzugefügt: {result}")
-
-# Validieren und generieren
-validation = api.validate_all()
-if validation["status"] == "valid":
-    generation = api.generate()
-    if generation["status"] == "success":
-        # Bonuswort-System (Buchstaben muessen im Gitter vorkommen)
-        bonus_system.set_bonus_word("EBENE")
-        bonus_system.update_available_letters(api.get_grid())
-        
-        # Gitter anzeigen
-        grid = api.get_grid()
-        for row in grid:
-            print(' '.join(cell if cell else '.' for cell in row))
-```
-
-## Testing
-
-To run the test suite, use the following command:
-
+### Tests ausführen
 ```bash
-# Pytest-Tests (49 Tests)
+# Automatisierte Pytest-Suite
 pytest test_framework.py -v
 
-# Beispiel-Nutzung
-python example_usage.py
-
-# Bonuswort-Beispiele
-python bonus_example.py
+# Alternativ mit unittest
+python -m unittest test_framework.py
 ```
 
-## Contributing
+### Code-Qualität & Style Check
+```bash
+# Linter (ruff)
+python -m ruff check .
 
-Contributions are welcome! Please see the `CONTRIBUTING.md` file for more information.
+# Type Checker (mypy)
+python -m mypy kreuzwortriddle.py
+```
 
-## License
+---
 
-MIT License - see the LICENSE file for details.
+## 📜 Lizenz & Beitragen
+
+Dieses Projekt steht unter der **MIT License**. Siehe [LICENSE](LICENSE) für Details.
+
+Beiträge, Issue-Meldungen und Feature-Wünsche sind herzlich willkommen! Bitte lesen Sie dazu auch unsere Guidelines in [CONTRIBUTING.md](CONTRIBUTING.md).

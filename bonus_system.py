@@ -1,4 +1,5 @@
-from typing import List, Set, Optional, Dict, Any
+from typing import Any, Dict, List, Optional, Set
+
 
 class BonusSystem:
     """Manages the bonus word logic for the crossword puzzle.
@@ -89,7 +90,7 @@ class BonusSystem:
         """Returns the status of the bonus system."""
         return {
             "bonus_word_set": bool(self.bonus_word),
-            "revealed_count": len([l for l in self.revealed_letters if l != '_']),
+            "revealed_count": len([letter for letter in self.revealed_letters if letter != '_']),
             "total_length": len(self.bonus_word) if self.bonus_word else 0,
             "hint": self.get_bonus_word_hint()
         }

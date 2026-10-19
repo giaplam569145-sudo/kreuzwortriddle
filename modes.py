@@ -1,5 +1,6 @@
 from gamemode import GameMode
-from models import Question, Orientation
+from models import Question
+
 
 class ThemeBasedRiddle(GameMode):
     """

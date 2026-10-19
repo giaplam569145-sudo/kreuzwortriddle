@@ -1,6 +1,7 @@
+from dataclasses import dataclass
 from enum import Enum
-from dataclasses import dataclass, field
-from typing import List, Tuple, Optional
+from typing import List, Tuple
+
 
 class Orientation(Enum):
     """Enumeration for word orientation in the grid.

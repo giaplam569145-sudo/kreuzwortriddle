@@ -4,6 +4,7 @@ Pytest-Tests fuer das Kreuzwort-Riddle Framework
 """
 
 import unittest
+
 import pytest
 
 from kreuzwortriddle import (
@@ -13,8 +14,7 @@ from kreuzwortriddle import (
     LLMKreuzwortAPI,
     ValidationError,
 )
-from modes import ThemeBasedRiddle, NumberRiddle, ReverseRiddle
-
+from modes import NumberRiddle, ReverseRiddle, ThemeBasedRiddle
 
 # ── Fixtures ──────────────────────────────────────────────────────────
 
