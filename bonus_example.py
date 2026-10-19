@@ -10,7 +10,6 @@ Author: Qwen Code (2025)
 from kreuzwortriddle import BonusRevealSystem, BonusWordConstraints, LLMKreuzwortAPI
 
 
-
 def demonstrate_bonus_feature():
     """Zeigt, wie das Bonuswort schrittweise aufgedeckt wird."""
 

@@ -1,5 +1,7 @@
-from typing import List, Optional
-from models import Question, Orientation, WordPlacement
+from typing import List
+
+from models import Orientation, Question, WordPlacement
+
 
 class GridGenerator:
     """Handles the generation of the crossword grid."""
